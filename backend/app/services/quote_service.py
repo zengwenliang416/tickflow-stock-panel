@@ -721,6 +721,7 @@ class QuoteService:
 
             if enriched_today.is_empty():
                 return
+            enriched_today = self._apply_quote_extra(enriched_today, quote_extra)
 
             # ---- 写盘 + 更新缓存 ----
             self._repo.flush_live_enriched(enriched_today)
@@ -731,3 +732,36 @@ class QuoteService:
                         mode_label, len(enriched_today), today, elapsed * 1000)
         except Exception as e:  # noqa: BLE001
             logger.warning("enriched 计算失败: %s", e)
+
+    @staticmethod
+    def _apply_quote_extra(enriched: pl.DataFrame, quote_extra: pl.DataFrame | None) -> pl.DataFrame:
+        """用实时行情直给字段修正当日 enriched。
+
+        首次无历史数据时, 全量计算路径会把涨跌幅算成 null/0；公开行情已经给出
+        prev_close/change_pct/turnover_rate, 这里以实时值为准。
+        """
+        if enriched.is_empty() or quote_extra is None or quote_extra.is_empty():
+            return enriched
+        cols = [
+            c for c in ["prev_close", "change_pct", "change_amount", "amplitude", "turnover_rate"]
+            if c in quote_extra.columns
+        ]
+        if not cols or "symbol" not in quote_extra.columns:
+            return enriched
+        rename_map = {c: f"_{c}_quote" for c in cols}
+        extra = quote_extra.select(["symbol", *cols]).rename(rename_map)
+        out = enriched.join(extra, on="symbol", how="left")
+        for col in cols:
+            quote_col = f"_{col}_quote"
+            if quote_col not in out.columns:
+                continue
+            if col in out.columns:
+                out = out.with_columns(
+                    pl.when(pl.col(quote_col).is_not_null())
+                    .then(pl.col(quote_col))
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
+            else:
+                out = out.with_columns(pl.col(quote_col).alias(col))
+        return out.drop([c for c in rename_map.values() if c in out.columns])
