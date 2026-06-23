@@ -17,6 +17,7 @@ export const QK = {
   quoteStatus:    ['quote-status'] as const,
   quoteInterval:  ['quote-interval'] as const,
   overviewMarket: (asOf?: string) => ['overview-market', asOf ?? 'latest'] as const,
+  cryptoTickers:   ['crypto-tickers'] as const,
   indexQuotes:    ['index-quotes'] as const,
   indexList:      ['index-list'] as const,
 

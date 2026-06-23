@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import analysis, backtest, data, ext_data, financials, indices, intraday, kline, monitor_rules, alerts, overview, pipeline, screener, settings as settings_api, signals, strategy, watchlist
+from app.api import analysis, backtest, crypto, data, ext_data, financials, indices, intraday, kline, monitor_rules, alerts, overview, pipeline, screener, settings as settings_api, signals, strategy, watchlist
 from app.api.routes import router as core_router
 from app.config import settings
 from app.jobs import daily_pipeline
@@ -202,6 +202,7 @@ app.include_router(strategy.router)
 app.include_router(signals.router)
 app.include_router(monitor_rules.router)
 app.include_router(alerts.router)
+app.include_router(crypto.router)
 
 # 生产期静态文件(前端 dist)
 _static = Path(settings.static_dir)

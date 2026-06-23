@@ -261,6 +261,38 @@ export interface OverviewMarket {
   industry_rank: { leading: OverviewDimensionRankItem[]; lagging: OverviewDimensionRankItem[] }
 }
 
+export interface CryptoTicker {
+  symbol: string
+  name: string
+  base?: string | null
+  quote?: string | null
+  last_price?: number | null
+  open_24h?: number | null
+  high_24h?: number | null
+  low_24h?: number | null
+  volume_24h?: number | null
+  amount_24h?: number | null
+  bid_price?: number | null
+  ask_price?: number | null
+  change_amount?: number | null
+  change_pct?: number | null
+  timestamp?: string | null
+}
+
+export interface CryptoTickersResponse {
+  source: 'okx'
+  market: 'SPOT'
+  count: number
+  symbols: string[]
+  rows: CryptoTicker[]
+  updated_at: number
+  auth: {
+    api_key_configured: boolean
+    api_secret_configured: boolean
+    passphrase_configured: boolean
+  }
+}
+
 // ===== Strategy Engine =====
 export interface StrategyParamDef {
   id: string
@@ -906,6 +938,10 @@ export const api = {
   marketSnapshot: () =>
     request<{ as_of: string | null; rows: MarketSnapshotRow[] }>('/api/screener/market-snapshot'),
   overviewMarket: (asOf?: string) => request<OverviewMarket>(`/api/overview/market${asOf ? `?as_of=${asOf}` : ''}`),
+  cryptoTickers: (symbols?: string[]) =>
+    request<CryptoTickersResponse>(
+      `/api/crypto/tickers${symbols?.length ? `?symbols=${encodeURIComponent(symbols.join(','))}` : ''}`,
+    ),
 
   limitLadder: (asOf?: string, extColumns?: string, direction?: 'up' | 'down') => {
     const params = new URLSearchParams()

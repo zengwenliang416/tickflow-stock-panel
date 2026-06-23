@@ -2,9 +2,9 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Flame, Gauge, LineChart, Loader2, RefreshCw, Sparkles, Target, Timer } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, BellRing, Bitcoin, Flame, Gauge, LineChart, Loader2, RefreshCw, Sparkles, Target, Timer } from 'lucide-react'
 import { DatePicker } from '@/components/DatePicker'
-import { api, type MarketSnapshotRow, type OverviewDimensionRankItem, type OverviewMarket, type AlertEvent } from '@/lib/api'
+import { api, type MarketSnapshotRow, type OverviewDimensionRankItem, type OverviewMarket, type AlertEvent, type CryptoTicker } from '@/lib/api'
 import { QK } from '@/lib/queryKeys'
 import { fmtBigNum, fmtPct } from '@/lib/format'
 import { useDataStatus, useCapabilities } from '@/lib/useSharedQueries'
@@ -42,6 +42,14 @@ function fmtStockPct(v: number | null | undefined) {
   const x = n(v)
   if (x == null) return '—'
   return `${x >= 0 ? '+' : ''}${(x * 100).toFixed(2)}%`
+}
+
+function fmtCryptoPrice(v: number | null | undefined) {
+  const x = n(v)
+  if (x == null) return '—'
+  if (x >= 1000) return x.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  if (x >= 1) return x.toLocaleString('en-US', { maximumFractionDigits: 4 })
+  return x.toLocaleString('en-US', { maximumFractionDigits: 8 })
 }
 
 function pctClass(v: number | null | undefined) {
@@ -240,6 +248,46 @@ function IndexTicker({ item }: { item: OverviewMarket['indices'][number] }) {
         {fmtPrice(item.last_price)}
       </div>
     </Link>
+  )
+}
+
+function CryptoTickerStrip({ rows, loading }: { rows: CryptoTicker[]; loading?: boolean }) {
+  return (
+    <section className="mb-3 rounded-card border border-border bg-surface/80 p-2.5">
+      <SectionTitle icon={Bitcoin} title="币圈行情" hint="OKX Spot" />
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
+        {rows.map(item => {
+          const pct = item.change_pct
+          const isUp = (n(pct) ?? 0) >= 0
+          return (
+            <div key={item.symbol} className="min-w-0 rounded-lg border border-border/60 bg-elevated/45 px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-medium text-foreground">{item.base || item.name}</div>
+                  <div className="font-mono text-[10px] text-muted">{item.symbol}</div>
+                </div>
+                <div className={`flex items-center gap-0.5 font-mono text-[11px] ${pctClass(pct)}`}>
+                  {isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {fmtStockPct(pct)}
+                </div>
+              </div>
+              <div className="mt-2 flex items-end justify-between gap-2">
+                <div className="font-mono text-sm font-semibold text-foreground">{fmtCryptoPrice(item.last_price)}</div>
+                <div className="text-right font-mono text-[10px] text-muted">
+                  <div>H {fmtCryptoPrice(item.high_24h)}</div>
+                  <div>L {fmtCryptoPrice(item.low_24h)}</div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {!rows.length && (
+          <div className="col-span-full py-5 text-center text-xs text-muted">
+            {loading ? '加载 OKX 行情…' : '暂无币圈行情'}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -478,6 +526,13 @@ export function Dashboard() {
     staleTime: 5_000,
     placeholderData: (prev) => prev,
   })
+  const crypto = useQuery({
+    queryKey: QK.cryptoTickers,
+    queryFn: () => api.cryptoTickers(),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
+  })
   const data = overview.data
   const caps = useCapabilities()
   const hasDepth = !!caps.data?.capabilities?.['depth5.batch']
@@ -562,6 +617,8 @@ export function Dashboard() {
       <div className="mb-3 grid grid-cols-4 gap-2">
         {data.indices.map(item => <IndexTicker key={item.symbol} item={item} />)}
       </div>
+
+      <CryptoTickerStrip rows={crypto.data?.rows ?? []} loading={crypto.isLoading} />
 
       <div className="mb-3 grid grid-cols-6 gap-2">
         <KpiCell label="个股涨 / 平 / 跌" value={<><span className="text-bull">{data.breadth.up}</span><span className="text-muted">/</span><span className="text-muted">{data.breadth.flat}</span><span className="text-muted">/</span><span className="text-bear">{data.breadth.down}</span></>} sub={`上涨率 ${data.breadth.up_pct.toFixed(1)}%`} />

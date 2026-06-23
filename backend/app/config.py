@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     tickflow_api_key: str = Field(default="", description="留空启用基础模式")
     market_data_provider: str = Field(default="longbridge", description="longbridge | tickflow | free")
 
+    # Crypto market data (OKX public market API; private auth kept for future account/trade use)
+    okx_base_url: str = "https://www.okx.com"
+    okx_symbols: str = "BTC-USDT,ETH-USDT,SOL-USDT,OKB-USDT,XRP-USDT,DOGE-USDT"
+    okx_api_key: str = ""
+    okx_api_secret: str = ""
+    okx_api_passphrase: str = ""
+
     # AI
     ai_provider: str = "openai_compat"
     ai_base_url: str = "https://api.deepseek.com/v1"
