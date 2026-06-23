@@ -4,17 +4,17 @@ import { formatNumber } from '@/lib/format'
 import { fmtDate } from '@/lib/format'
 import { Skeleton } from './Skeleton'
 
-// 卡片能力定义：capKey → 查 capability limits；tierReq → 无权限时显示的档位要求
+// 卡片能力定义：capKey → 查 capability limits；tierReq → 无权限时显示的能力要求
 export const CARD_META: Record<string, {
   capKey: string   // 对应的 capability key，空串表示本地计算
-  tierReq: string  // 最低档位要求（无权限时显示）
+  tierReq: string  // 最低能力要求（无权限时显示）
 }> = {
-  instruments: { capKey: 'quote.by_symbol',        tierReq: 'Free' },
-  daily:       { capKey: 'kline.daily.batch',       tierReq: 'Starter+' },
-  adj_factor:  { capKey: 'adj_factor',              tierReq: 'Starter+' },
+  instruments: { capKey: 'quote.by_symbol',        tierReq: '基础' },
+  daily:       { capKey: 'kline.daily.batch',       tierReq: '批量日K' },
+  adj_factor:  { capKey: 'adj_factor',              tierReq: '复权因子' },
   enriched:    { capKey: '',                        tierReq: '' },
-  minute:      { capKey: 'kline.minute.batch',      tierReq: 'Pro+' },
-  financials:  { capKey: 'financial',                tierReq: 'Expert' },
+  minute:      { capKey: 'kline.minute.batch',      tierReq: '分钟K' },
+  financials:  { capKey: 'financial',                tierReq: '财务数据' },
 }
 
 export function Pill({ label, value }: { label: string; value: number | string }) {
@@ -52,9 +52,9 @@ function CapBadge({ hasCap, isLocal, tierLabel, tierReq, capInfo, localSuffix }:
     )
   }
 
-  if (!hasCap && tierReq && tierReq !== 'Free') {
-    // 缺权限且非 Free 档(付费档位才提示升级);Free 档人人可用,
-    // 若显示"需 Free"会造成 Expert 等用户困惑(通常是探测瞬时失败丢能力)
+  if (!hasCap && tierReq && tierReq !== '基础') {
+    // 缺能力且非基础能力才提示;基础能力人人可用,
+    // 若显示"需 基础"会造成用户困惑(通常是探测瞬时失败丢能力)
     return (
       <span className="text-[10px] text-warning/90 bg-warning/8 rounded px-1.5 py-px font-medium">
         需 {tierReq}

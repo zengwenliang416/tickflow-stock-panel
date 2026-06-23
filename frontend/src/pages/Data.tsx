@@ -863,7 +863,7 @@ export function Data() {
                 </button>
                 {!hasDailyBatchCap && (
                   <span className="text-[10px] text-warning/80 bg-warning/8 rounded px-1.5 py-px font-medium">
-                    需 Starter+ / Pro 批量日 K 权限
+                    需批量日 K 能力
                   </span>
                 )}
               </div>

@@ -7,31 +7,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/Python-≥3.11-blue.svg)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
-[![Data: TickFlow](https://img.shields.io/badge/Data-TickFlow-00b386.svg)](https://tickflow.org/auth/register?ref=V3KDKGXPEA)
+[![Data: Local First](https://img.shields.io/badge/Data-Local%20First-00b386.svg)](./docs)
 [![Deploy: Docker](https://img.shields.io/badge/Deploy-Docker-2496ed.svg)](./Dockerfile)
 
-基于 [TickFlow](https://tickflow.org/auth/register?ref=V3KDKGXPEA) 数据 · 🚀 **开箱即用**(单容器 / Free 模式无需 Key)
-能力驱动,适配 Free → Expert 全档位订阅 · 🔌 **自由接入第三方扩展数据**(例如 Tushare、自有量化项目数据)
+自托管部署 · 🚀 **开箱即用**(单容器 / 无 Key 可用基础数据)
+能力驱动,按当前数据源可用能力自动降级 · 🔌 **自由接入第三方扩展数据**(例如 Tushare、自有量化项目数据)
 
 **[核心功能](#-核心功能)** · **[快速开始](#-快速开始)** · **[配置](#️-配置)** · **[路线图](#-路线图)**
 
 </div>
 
-> **⚠️说明**:目前项目基于[TickFlow](https://tickflow.org/auth/register?ref=V3KDKGXPEA)数据源。自有数据源需二次开发修改字段映射即可;后续需求人多的话可能会实现切换数据源功能.
+> **说明**:当前默认数据适配层仍使用项目内置 SDK。自有数据源可通过扩展数据表接入;若要完全替换默认行情/K 线/财务接口,需要做数据源适配层重构。
 
 ---
 
 ## 🎯 项目定位
 
-让任何**个人散户 / 量化爱好者**,**零运维**地拥有一套**与自己订阅档位严格匹配**的 A 股分析、选股、监控工作台。  
-基于 [TickFlow](https://tickflow.org/auth/register?ref=V3KDKGXPEA) Key **低成本**获取数据。**填写邀请码 `V3KDKGXPEA` 免费领取概念行业等扩展数据**。<br>
-**任意接入第三方数据**(Tushare 等),页面可视化自定义配置扩展数据表。
+让任何**个人散户 / 量化爱好者**,**零运维**地拥有一套 A 股分析、选股、监控工作台。
+默认数据源可以无 Key 试用基础能力;也可以通过页面可视化配置接入 **Tushare / CSV / Excel / HTTP API / 自有量化项目数据**。
 
 **项目所需配置**:
 
 | 配置项 | 说明 | 是否必填 |
 | :--- | :--- | :--- |
-| **TickFlow API Key** | 数据源凭证,留空启用 Free 模式(无需注册即可体验) | 可选 |
+| **数据源 API Key** | 数据源凭证,留空启用基础模式 | 可选 |
 | **AI 大模型 API Key** | 用于 AI 生成策略、个股分析(开发中)、行情分析(开发中),任意 OpenAI 兼容接口,留空关闭 | 可选 |
 
 <table>
@@ -142,8 +141,8 @@
 
 ### 🧰 数据与扩展
 
-- **多源数据**:TickFlow 日 K / 分钟 K / 指数 / 财务(利润 / 资产负债 / 现金流)/ 自选行情
-- **🔌 第三方数据接入(重点)** —— TickFlow 之外的数据也能用:
+- **多源数据**:日 K / 分钟 K / 指数 / 财务(利润 / 资产负债 / 现金流)/ 自选行情
+- **🔌 第三方数据接入(重点)** —— 默认数据源之外的数据也能用:
   - 支持 **Tushare** 等第三方数据源,通过 **HTTP 定时拉取**自动入库
   - 支持 **CSV / Excel 上传** · **JSON 写入**,自动 schema 发现与符号归一
   - **页面可视化配置**扩展数据表,无需改代码
@@ -167,7 +166,7 @@
 ### 方式 A:Docker(最省心,生产推荐)
 
 ```bash
-cp .env.example .env       # 按需填写 Key(留空即 Free 模式,可直接体验)
+cp .env.example .env       # 按需填写 Key(留空即基础模式,可直接体验)
 docker compose up --build
 # 打开 http://localhost:3018
 ```
@@ -175,7 +174,7 @@ docker compose up --build
 ### 方式 B:Dev 模式(二次开发)
 
 ```bash
-cp .env.example .env       # 填 TICKFLOW_API_KEY,留空则启用 Free 试用
+cp .env.example .env       # 按需填写数据源 Key,留空则启用基础模式
 ```
 
 **一键启动**(推荐,自动检查依赖 / 释放端口 / 同时起前后端,Ctrl-C 一并关闭):
@@ -216,10 +215,10 @@ pnpm dev                   # http://localhost:3011
 
 ## 🧭 第一次使用
 
-1. 打开面板 → **设置 → 凭据与能力** → 点 **重新检测**,确认 Tier Label
+1. 打开面板 → **设置 → 数据源** → 点 **重新检测**,确认当前能力
 2. 点 **立即跑盘后管道** —— 拉日 K + 计算 enriched 表
-   - **Free 用户**:只同步内置 DEMO_SYMBOLS(浦发 / 招商 / 茅台等 10 只)
-   - **Starter+**:同步全 A 或可获取的 instruments 列表
+   - **基础模式**:只同步内置 DEMO_SYMBOLS(浦发 / 招商 / 茅台等 10 只)
+   - **增强能力**:同步全 A 或可获取的 instruments 列表
 3. **自选**页:添加跟踪标的;点代码进 **K 线**页看蜡烛图 + 买卖点
 4. **选股**页:点任一内置策略卡片即时扫描;或用自定义信号组合条件
 5. **回测**页:选策略 / 信号 + 时间区间 → 跑回测 → 看净值 / 夏普 / 交易明细(SSE 实时进度)
@@ -231,15 +230,15 @@ pnpm dev                   # http://localhost:3011
 
 所有配置通过项目根目录的 `.env` 文件读取(复制 `.env.example` 开始)。配置也可在面板 **设置** 页面内修改。
 
-### 数据源:TickFlow
+### 数据源
 
-TickFlow 提供订阅制 A 股数据。**留空 `TICKFLOW_API_KEY` 即启用 Free 模式,无需注册即可体验**。
+默认适配层支持无 Key 基础模式。填入 `TICKFLOW_API_KEY` 后,后端会按实际可用能力自动启用对应功能。
 
 ```ini
-TICKFLOW_API_KEY=              # 留空 = Free 模式;填入 Key = 按订阅档位解锁
+TICKFLOW_API_KEY=              # 留空 = 基础模式;填入 Key = 按实际能力启用功能
 ```
 
-> 完整能力矩阵见 [tickflow.org/pricing](https://tickflow.org/pricing/)。系统启动时会自动探测你的真实能力集,UI 显示「≈ Pro」等友好标签。
+系统启动时会自动探测真实能力集,UI 会展示当前可用能力。
 
 ### AI(可选):策略生成
 
@@ -273,7 +272,7 @@ DATA_DIR=./data       # Parquet / DuckDB 数据存储目录
 | **后端** | FastAPI · Pydantic v2 · APScheduler · sse-starlette |
 | **数据** | Polars(计算)· DuckDB(查询)· Parquet(存储)· PyArrow |
 | **回测** | vectorbt(全项目唯一 pandas 边界) |
-| **数据源** | [TickFlow](https://tickflow.org/auth/register?ref=V3KDKGXPEA) 官方 SDK(`tickflow[all]`) |
+| **数据源** | 默认 SDK 适配层 + 本地 DuckDB/Parquet + 可视化扩展数据 |
 | **AI**(可选) | OpenAI 兼容接口(DeepSeek / 通义 / Ollama 等) |
 | **前端** | React 18 · Vite · TypeScript · Tailwind CSS · Framer Motion · Tanstack Query · Lightweight Charts · ECharts · dnd-kit |
 | **部署** | Docker 两阶段构建,前端 dist 拷进后端镜像,**单容器** |
@@ -316,15 +315,13 @@ cd ../frontend && pnpm install && pnpm dev
 
 ## ⚠️ 免责声明
 
-本项目仅供**学习与量化研究**,**不构成任何投资建议**。回测结果不代表未来收益。A 股有风险,入市需谨慎。数据准确性以数据源 TickFlow 官方为准。
+本项目仅供**学习与量化研究**,**不构成任何投资建议**。回测结果不代表未来收益。A 股有风险,入市需谨慎。数据准确性以实际接入的数据源为准。
 
 ---
 
 ## 📄 License
 
 [MIT](./LICENSE) © tickflow-stock-panel contributors
-
-本项目依赖 [TickFlow](https://tickflow.org/auth/register?ref=V3KDKGXPEA) 提供数据服务,使用前请遵守其服务条款。
 
 ## 社区
 

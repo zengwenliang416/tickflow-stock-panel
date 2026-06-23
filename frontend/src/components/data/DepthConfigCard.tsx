@@ -8,7 +8,7 @@ import { isExpertOrAbove } from '@/lib/capability-labels'
 /**
  * 五档盘口 sealed(真假涨停) 配置内容(纯内容, 无外框, 由父级 Card 包裹)。
  *
- * - 轮询间隔: Pro 10~120s / Expert 3~300s
+ * - 轮询间隔:普通盘口能力 10~120s / 高级盘口能力 3~300s
  * - 盘后定版时间: 15:01~18:00, 默认 15:02
  * - disabled 时(监控关闭)输入框禁用
  */
@@ -49,8 +49,8 @@ export function DepthConfigContent({ disabled }: { disabled?: boolean }) {
   if (!hasDepth) {
     return (
       <p className="text-xs text-muted leading-relaxed">
-        真假涨停判定依赖五档盘口实时快照,需 <span className="text-accent">Pro 及以上套餐</span>。
-        升级后连板梯队将自动区分真封板(显示封单量)与假涨停(归入炸板)。
+        真假涨停判定依赖五档盘口实时快照,需 <span className="text-accent">五档盘口能力</span>。
+        配置后连板梯队将自动区分真封板(显示封单量)与假涨停(归入炸板)。
       </p>
     )
   }

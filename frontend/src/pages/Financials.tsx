@@ -30,8 +30,8 @@ export function Financials() {
         <PageHeader title="财务" subtitle="利润表 / 资负表 / 现金流 / 关键指标" />
         <EmptyState
           icon={Lock}
-          title="需要 Expert 套餐"
-          hint="财务数据接口仅 Expert 套餐可用。升级后此页自动显示财务数据面板。"
+          title="需要财务数据能力"
+          hint="当前数据源未提供财务数据接口。配置具备财务数据能力的 Key 后,此页会自动显示财务数据面板。"
         />
       </>
     )
@@ -52,7 +52,7 @@ export function Financials() {
     <>
       <PageHeader
         title="财务"
-        subtitle="利润表 / 资负表 / 现金流 / 关键指标 · Expert"
+        subtitle="利润表 / 资负表 / 现金流 / 关键指标"
         right={
           <div className="flex gap-2">
             <button
@@ -73,7 +73,7 @@ export function Financials() {
       {syncing && (
         <div className="px-5 -mt-2 pb-1 text-xs text-accent/80 flex items-center gap-1.5">
           <Loader2 className="w-3 h-3 animate-spin" />
-          正在从 TickFlow 拉取财务数据，已同步 {syncedCount}/4 张表…
+          正在从数据源拉取财务数据，已同步 {syncedCount}/4 张表…
         </div>
       )}
 
@@ -122,7 +122,7 @@ export function Financials() {
       {isLoading ? (
         <div className="p-5 text-sm text-muted">加载中…</div>
       ) : !available ? (
-        <div className="p-5 text-sm text-muted">暂无数据，点击"全部同步"从 TickFlow 拉取财务数据</div>
+        <div className="p-5 text-sm text-muted">暂无数据，点击"全部同步"从数据源拉取财务数据</div>
       ) : (
         <>
           {/* 个股搜索区 */}

@@ -1,7 +1,7 @@
 """Key / 凭据本地存储(§14)。
 
 存储位置:`data/user_data/secrets.json`,权限 0600。
-优先级:secrets.json > .env > 空(Free 模式)。
+优先级:secrets.json > .env > 空(基础模式)。
 
 UI 改 Key 时只动这个文件,不动 .env。
 """
@@ -61,7 +61,7 @@ def clear(*keys: str) -> dict:
 
 
 def get_tickflow_key() -> str:
-    """取当前 TickFlow Key:secrets.json 优先,否则 .env。"""
+    """取当前数据源 Key:secrets.json 优先,否则 .env。"""
     val = load().get("tickflow_api_key")
     if val:
         return val

@@ -184,14 +184,14 @@ function TierBadge({ label, hasKey }: { label: string; hasKey?: boolean }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-foreground">TickFlow</span>
+              <span className="text-xs font-medium text-foreground">数据源</span>
               <span
                 className="h-1.5 w-1.5 rounded-full"
                 style={{ ...t.dotStyle, ...(base === 'expert' ? { animation: 'pulse 2s infinite' } : {}) }}
               />
             </div>
             <div className="mt-0.5 truncate text-[10px] leading-tight text-muted">
-              {isFree && !hasKey ? '配置 Key 解锁更多能力' : t.desc}
+              {isFree && !hasKey ? '配置 Key 启用更多能力' : t.desc}
             </div>
           </div>
           <span
@@ -340,8 +340,8 @@ export function Layout() {
               className="font-mono font-bold text-[13px] tracking-[0.06em] text-foreground leading-tight"
               style={{ textShadow: `0 0 10px ${BRAND}44` }}
             >
-              <div>TickFlow</div>
-              <div>Stock Panel</div>
+              <div>A-SHARE</div>
+              <div>QUANT</div>
             </div>
           </div>
 
@@ -397,11 +397,11 @@ export function Layout() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-secondary truncate">实时行情</span>
               <span className="text-[10px] text-accent/70 font-medium bg-accent/10 px-1.5 py-0.5 rounded">
-                需 Starter+
+                需增强能力
               </span>
             </div>
           ) : (
-            /* Starter+ — 开关 + 跳转设置 */
+            /* 具备实时能力 — 开关 + 跳转设置 */
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${

@@ -18,15 +18,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # TickFlow
-    tickflow_api_key: str = Field(default="", description="留空启用 free 模式")
+    # Data provider
+    tickflow_api_key: str = Field(default="", description="留空启用基础模式")
 
     # AI
     ai_provider: str = "openai_compat"
-    ai_base_url: str = "https://api.alysc.top"
+    ai_base_url: str = "https://api.deepseek.com/v1"
     ai_api_key: str = ""
-    ai_model: str = "gpt-5.5"
-    ai_daily_token_budget: int = 5_000_000
+    ai_model: str = "deepseek-chat"
+    ai_daily_token_budget: int = 500_000
 
     # Server
     host: str = "0.0.0.0"
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
 
     @property
     def use_free_mode(self) -> bool:
-        """是否走 Free 模式。优先看 secrets.json,其次看 .env。"""
+        """是否走基础模式。优先看 secrets.json,其次看 .env。"""
         from app import secrets_store
         return not secrets_store.get_tickflow_key()
 

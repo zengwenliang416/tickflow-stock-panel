@@ -22,7 +22,7 @@ export function Logo({ className, size = 32, style }: LogoProps) {
       className={className}
       style={style}
       role="img"
-      aria-label="TickFlow Stock Panel"
+      aria-label="A股量化工作台"
     >
       {/* 左方括号 */}
       <path

@@ -617,7 +617,7 @@ export function StrategyBacktest() {
   const [simMode, setSimMode] = useState<'position' | 'full'>(saved?.mode ?? 'position')
   const [holdingDays, setHoldingDays] = useState(saved?.holdingDays ?? '5')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // 高颗粒回测（分钟K精确回测）— 开发中，Starter+ 功能
+  // 高颗粒回测（分钟K精确回测）— 开发中，需分钟K能力
   const [highGranularity, setHighGranularity] = useState(false)
   const { data: caps } = useCapabilities()
   const isFreeTier = (caps?.label ?? '').toLowerCase().startsWith('free')
@@ -985,7 +985,7 @@ export function StrategyBacktest() {
                 }}
                 disabled={isFreeTier}
                 title={isFreeTier
-                  ? '高颗粒回测（分钟K精确回测）：需 Starter+ 档位'
+                  ? '高颗粒回测（分钟K精确回测）：需要分钟K能力'
                   : '高颗粒回测（分钟K精确回测）：切换后结合每日分钟K更精确回测。⚠️ 开发中，且会显著影响性能、回测很慢。'
                 }
                 className={`group relative inline-flex h-3.5 w-6 items-center rounded-full shrink-0 transition-colors duration-200 ${
@@ -1000,7 +1000,7 @@ export function StrategyBacktest() {
               </button>
               <span className={`text-[9px] font-medium ${highGranularity ? 'text-amber-400' : 'text-muted/50'}`}>分钟K</span>
               {isFreeTier && (
-                <span className="text-[8px] text-accent/70 font-medium bg-accent/10 px-1 py-px rounded">Starter+</span>
+                <span className="text-[8px] text-accent/70 font-medium bg-accent/10 px-1 py-px rounded">分钟K</span>
               )}
             </div>
           </div>

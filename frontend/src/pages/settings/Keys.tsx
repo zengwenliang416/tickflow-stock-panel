@@ -10,11 +10,9 @@ import {
   AlertCircle,
   RefreshCw,
   Activity,
-  ExternalLink,
   Loader2,
   Save,
   Check,
-  Copy,
   HelpCircle,
 } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -34,7 +32,6 @@ export function SettingsKeysPanel() {
   const [revealing, setRevealing] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [copiedCode, setCopiedCode] = useState(false)
 
   const save = useMutation({
     mutationFn: () => api.saveTickflowKey(keyInput.trim()),
@@ -72,40 +69,9 @@ export function SettingsKeysPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-6 max-w-5xl">
         {/* ========== 左列: Key 配置 ========== */}
         <div className="space-y-6">
-          <Card icon={Key} title="TickFlow API Key">
+          <Card icon={Key} title="数据源 API Key">
             <p className="text-sm text-secondary leading-relaxed mb-4">
-              在{' '}
-              <a
-                href="https://tickflow.org/auth/register?ref=V3KDKGXPEA"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline inline-flex items-baseline gap-0.5"
-              >
-                tickflow.org
-                <ExternalLink className="h-3 w-3 self-center" />
-              </a>{' '}
-              注册获取。API Key 存放为本地文件,不会上传任何第三方,请妥善保管。
-            </p>
-            <p className="text-xs text-secondary leading-relaxed mb-4">
-              通过上方链接注册或填写邀请码{' '}
-              <span className="font-mono font-semibold text-accent inline-flex items-baseline gap-1">
-                V3KDKGXPEA
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText('V3KDKGXPEA').then(() => {
-                      setCopiedCode(true)
-                      setTimeout(() => setCopiedCode(false), 1500)
-                    })
-                  }}
-                  className="text-muted hover:text-accent transition-colors duration-150 ease-smooth self-center"
-                  aria-label="复制邀请码"
-                  tabIndex={-1}
-                >
-                  {copiedCode ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                </button>
-              </span>
-              ,即可免费领取概念行业等扩展数据。
+              API Key 仅保存在本机项目文件,不会上传到本应用之外的服务。留空时使用基础模式,需要更多数据能力时可填写你自己的数据源凭证。
             </p>
 
             {/* 当前状态 */}
@@ -122,7 +88,7 @@ export function SettingsKeysPanel() {
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4 text-warning shrink-0" />
-                      <span className="text-sm font-medium text-warning">Free 试用</span>
+                      <span className="text-sm font-medium text-warning">基础模式</span>
                     </>
                   )}
                 </div>
@@ -150,7 +116,7 @@ export function SettingsKeysPanel() {
               <div className="relative">
                 <input
                   type={revealing ? 'text' : 'password'}
-                  placeholder={mode === 'api_key' ? '粘贴新 Key 替换当前' : '粘贴 TickFlow API Key'}
+                  placeholder={mode === 'api_key' ? '粘贴新 Key 替换当前' : '粘贴数据源 API Key'}
                   value={keyInput}
                   onChange={(e) => { setKeyInput(e.target.value); if (saved) setSaved(false) }}
                   className="w-full px-3 py-2 pr-9 rounded-input bg-base border border-border text-sm font-mono focus:outline-none focus:border-accent transition-colors duration-150 ease-smooth"
@@ -211,7 +177,7 @@ export function SettingsKeysPanel() {
         <div className="space-y-6">
           <Card
             icon={Activity}
-            title="订阅档位"
+            title="数据能力"
             right={
               <button
                 onClick={() => redetect.mutate()}
@@ -232,7 +198,7 @@ export function SettingsKeysPanel() {
                   <TierHelpPopover currentLabel={caps.data.label} />
                 </div>
                 <div className="mt-1 text-xs text-muted">
-                  根据 API Key 自动检测 · 拥有"代表性 capability"任一即认为该档
+                  根据 API Key 自动检测 · 拥有"代表性 capability"任一即认为可用
                 </div>
 
                 {settings.data?.missing_caps && settings.data.missing_caps.length > 0 && (
@@ -322,7 +288,7 @@ export function SettingsKeysPanel() {
           <div className="relative w-[90vw] max-w-[380px] rounded-card border border-border bg-base shadow-2xl p-6">
             <h3 className="text-sm font-medium text-foreground mb-2">清除 API Key</h3>
             <p className="text-xs text-secondary mb-5">
-              清除后将退回 Free 模式,需要重新输入 Key 才能恢复。
+              清除后将退回基础模式,需要重新输入 Key 才能恢复。
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
@@ -398,8 +364,8 @@ function TierHelpPopover({ currentLabel }: { currentLabel: string }) {
               {/* 检测说明 */}
               <div className="text-secondary space-y-1.5">
                 <div className="font-medium text-foreground">档位检测说明</div>
-                <p>系统保存 API Key 后会逐一试探各项数据能力,根据实际可用的功能自动匹配档位。拥有某档"代表性能力"(如 Expert 的财务数据)即判定为该档。</p>
-                <p className="text-muted">"代表性能力"任一命中即认作该档及以上,单个能力探测失败不会误降档位。补购单项能力(如 Pro + 分钟K)会在档位标签后显示 + 号。</p>
+                <p>系统保存 API Key 后会逐一试探各项数据能力,根据实际可用的功能自动匹配能力标签。拥有某类"代表性能力"(如财务数据)即判定该类能力可用。</p>
+                <p className="text-muted">"代表性能力"任一命中即认作对应能力可用,单个能力探测失败不会误降能力范围。额外能力会在标签后显示 + 号。</p>
               </div>
             </motion.div>
           </>

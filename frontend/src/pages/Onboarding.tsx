@@ -12,8 +12,6 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowLeft,
-  ExternalLink,
-  Copy,
   Sparkles,
   LineChart,
   ScanSearch,
@@ -30,9 +28,9 @@ import { CAP_LABELS } from '@/lib/capability-labels'
 import { Logo } from '@/components/Logo'
 
 // ===== 引导页:4 步向导 =====
-// 0. 欢迎  1. 输入 Key(可跳过)  2. 能力探测结果  3. 完成 → 写标记 → 进面板
+// 0. 欢迎  1. 输入数据源 Key(可跳过)  2. 能力探测结果  3. 完成 → 写标记 → 进面板
 
-const STEPS = ['欢迎', '配置 Key', '能力探测', '完成'] as const
+const STEPS = ['欢迎', '数据源', '能力探测', '完成'] as const
 
 const BRAND = '#8B5CF6'
 
@@ -102,7 +100,7 @@ export function Onboarding() {
             className="shrink-0"
             style={{ color: BRAND, filter: `drop-shadow(0 0 8px ${BRAND}55)` }}
           />
-          <span className="text-sm font-semibold tracking-tight">TickFlow Stock Panel</span>
+          <span className="text-sm font-semibold tracking-tight">A股量化工作台</span>
         </div>
         {/* 步骤进度条 —— 胶囊式 */}
         <div className="flex items-center gap-1.5">
@@ -173,7 +171,7 @@ function WelcomeStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       </motion.div>
 
       <h1 className="mt-6 text-3xl font-bold text-foreground tracking-tight">
-        欢迎使用 TickFlow Stock Panel
+        欢迎使用 A股量化工作台
       </h1>
       <p className="mt-3 text-sm text-secondary leading-relaxed max-w-md mx-auto">
         一个本地化的 A 股量化分析面板 —— 行情、选股、回测、监控、财务一体化。
@@ -217,7 +215,7 @@ function WelcomeStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
   )
 }
 
-// ===== Step 1: 输入 TickFlow Key =====
+// ===== Step 1: 输入数据源 Key =====
 
 function KeyStep({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () => void; onBack: () => void }) {
   const qc = useQueryClient()
@@ -225,7 +223,6 @@ function KeyStep({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () =>
 
   const [keyInput, setKeyInput] = useState('')
   const [revealing, setRevealing] = useState(false)
-  const [copiedCode, setCopiedCode] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const save = useMutation({
@@ -247,44 +244,15 @@ function KeyStep({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () =>
         <div className="rounded-lg bg-accent/10 p-2">
           <ShieldCheck className="h-4 w-4 text-accent" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">配置 TickFlow API Key</h2>
+        <h2 className="text-xl font-bold text-foreground">配置数据源 API Key</h2>
       </div>
       <p className="mt-2.5 text-sm text-secondary leading-relaxed">
-        Key 决定你能使用的数据范围。没有 Key 也能以 <span className="font-medium text-foreground">Free</span> 模式试用基础功能;
-        配置后可解锁概念行业、财务数据等扩展能力。
+        Key 决定你能使用的数据范围。没有 Key 也能以 <span className="font-medium text-foreground">基础模式</span> 使用基础功能;
+        配置后可启用概念行业、财务数据等扩展能力。
       </p>
 
-      {/* 注册引导 */}
       <div className="mt-5 rounded-card border border-border bg-surface/80 backdrop-blur-sm p-4 text-xs text-secondary leading-relaxed">
-        还没有 Key?前往{' '}
-        <a
-          href="https://tickflow.org/auth/register?ref=V3KDKGXPEA"
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent hover:underline inline-flex items-baseline gap-0.5 font-medium"
-        >
-          tickflow.org
-          <ExternalLink className="h-3 w-3 self-center" />
-        </a>{' '}
-        注册,或填写邀请码{' '}
-        <span className="font-mono font-semibold text-accent inline-flex items-baseline gap-1">
-          V3KDKGXPEA
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard?.writeText('V3KDKGXPEA').then(() => {
-                setCopiedCode(true)
-                setTimeout(() => setCopiedCode(false), 1500)
-              })
-            }}
-            className="text-muted hover:text-accent transition-colors self-center"
-            aria-label="复制邀请码"
-            tabIndex={-1}
-          >
-            {copiedCode ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          </button>
-        </span>
-        ,即可免费领取扩展数据。
+        API Key 只保存在本机项目文件。当前没有 Key 也可以继续完成初始化,后续随时在设置页补充或替换。
       </div>
 
       {/* Key 已配置提示 */}
@@ -309,7 +277,7 @@ function KeyStep({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () =>
         <div className="relative">
           <input
             type={revealing ? 'text' : 'password'}
-            placeholder={alreadyHasKey ? '粘贴新 Key 替换当前' : '粘贴 TickFlow API Key'}
+            placeholder={alreadyHasKey ? '粘贴新 Key 替换当前' : '粘贴数据源 API Key'}
             value={keyInput}
             onChange={(e) => {
               setKeyInput(e.target.value)
@@ -400,7 +368,7 @@ function ResultStep({ onNext, onBack }: { onNext: () => void; onBack: () => void
         <>
           <p className="mt-2.5 text-sm text-secondary leading-relaxed">
             Key 已生效,以下是你当前可用的全部能力。后续可在
-            <span className="text-foreground font-medium"> 设置 → 账户 </span>
+            <span className="text-foreground font-medium"> 设置 → 数据源 </span>
             中重新检测或更换 Key。
           </p>
 
@@ -442,10 +410,10 @@ function ResultStep({ onNext, onBack }: { onNext: () => void; onBack: () => void
           <div className="mx-auto w-fit rounded-xl bg-elevated p-3">
             <Zap className="h-6 w-6 text-warning" />
           </div>
-          <div className="mt-3 text-sm font-medium text-foreground">将以 Free 模式继续</div>
+          <div className="mt-3 text-sm font-medium text-foreground">将以基础模式继续</div>
           <p className="mt-2 text-xs text-muted leading-relaxed max-w-sm mx-auto">
             你可以立即试用基础行情与选股功能。需要扩展数据时,随时在
-            <span className="text-foreground font-medium"> 设置 → 账户 </span>
+            <span className="text-foreground font-medium"> 设置 → 数据源 </span>
             配置 Key。
           </p>
         </div>

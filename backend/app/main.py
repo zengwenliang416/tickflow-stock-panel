@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
-        "TickFlow Stock Panel v%s starting (mode=%s)",
+        "A-share quant panel v%s starting (mode=%s)",
         __version__, "free" if settings.use_free_mode else "api_key",
     )
 
@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
     pull_scheduler.refresh(store.data_dir)
     app.state.pull_scheduler = pull_scheduler
 
-    # 财务数据独立调度 (需 Expert 套餐)
+    # 财务数据独立调度 (需财务数据能力)
     from app.services.financial_sync import financial_scheduler
     financial_scheduler.start(store.data_dir, capset)
     app.state.financial_scheduler = financial_scheduler
@@ -160,9 +160,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TickFlow Stock Panel",
+    title="A-share Quant Panel",
     version=__version__,
-    description="A 股选股 + 回测面板 — TickFlow 适配",
+    description="A 股选股 + 监控 + 回测面板",
     lifespan=lifespan,
 )
 

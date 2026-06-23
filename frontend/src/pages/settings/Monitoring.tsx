@@ -249,7 +249,7 @@ export function SettingsMonitoringPanel({ highlight }: { highlight?: string } = 
         <Card
           icon={Flame}
           title="连板梯队降级修正"
-          badge={!hasDepth ? '需 Pro+' : undefined}
+          badge={!hasDepth ? '需盘口能力' : undefined}
           right={hasDepth ? (
             <button
               onClick={() => runFix.mutate()}

@@ -527,7 +527,7 @@ export interface StrategyBacktestResult {
 
 // ===== Settings =====
 
-/** 端点发现清单 —— 对应 tickflow.org/endpoints.json */
+/** 端点发现清单 —— 对应后端代理返回的远程端点列表 */
 export interface EndpointItem {
   id: string
   url: string
@@ -1007,7 +1007,7 @@ export const api = {
       },
     ),
 
-  // 端点发现 —— 后端代理拉取 tickflow.org/endpoints.json(前端无法跨域直连)
+  // 端点发现 —— 后端代理拉取远程端点列表(前端无法跨域直连)
   listEndpoints: () =>
     request<EndpointManifest>('/api/settings/endpoints'),
 

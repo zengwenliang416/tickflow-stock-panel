@@ -52,7 +52,7 @@ export function MinuteSyncConfig({ caps, isRunning, onStart }: { caps: { label: 
         </div>
         {!hasMinuteCap && (
           <span className="text-[10px] text-warning/80 bg-warning/8 rounded px-1.5 py-px font-medium">
-            需 Pro+
+            需分钟K能力
           </span>
         )}
       </div>
@@ -101,7 +101,7 @@ export function MinuteSyncConfig({ caps, isRunning, onStart }: { caps: { label: 
 
 function MinuteExtendControls({ hasMinuteCap, tierLabel, isRunning, onStart }: { hasMinuteCap: boolean; tierLabel: string; isRunning: boolean; onStart: () => void }) {
   const qc = useQueryClient()
-  // 月单位(按月扩展更长的分钟K历史)仅 Expert+ 开放;Pro 仅可用"天"(1~15 天)
+  // 月单位(按月扩展更长的分钟K历史)仅更高数据能力开放;普通分钟K能力仅可用"天"(1~15 天)
   const canUseMonth = isExpertOrAbove(tierLabel)
   const [unit, setUnit] = useState<'day' | 'month'>('day')
   const [value, setValue] = useState(5)

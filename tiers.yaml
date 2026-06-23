@@ -1,4 +1,4 @@
-# tickflow-stock-panel —— TickFlow 推荐套餐能力对照表(§5.2)
+# tickflow-stock-panel —— 当前数据源能力对照表(§5.2)
 #
 # 仅用途:
 #   1. 启动期能力探测决定试探顺序
@@ -6,14 +6,14 @@
 #   3. 加购建议时的价格预估
 #
 # 业务代码永远不读这张表,只读运行时探测出的 CapabilitySet。
-# 来源:https://tickflow.org/pricing/
+# 来源:项目内置默认数据源能力约定
 # 频率单位:次/分钟。batch 单位:标的/次。
 #
 # 说明(2026-06-19 核对):
 #   pricing 页为前端动态渲染,自动抓取只能拿到 FAQ 文字,无法取得精确数值表。
 #   下表数值除明确标注「推断」的条目外,均沿用 2026-05-21 旧版抓取。
-#   FAQ 印证的能力归属:免费=行情+日K;Starter+=标的池+批量;Pro+=分钟K;Expert+=财务+WS。
-#   标注「推断」的条目按 tiers.yaml 既有 batch 类接口规律推得,建议后续用真实套餐核对。
+#   能力归属:基础=行情+日K;批量=标的池+批量;分钟K=分钟K;财务=财务+WS。
+#   标注「推断」的条目按 tiers.yaml 既有 batch 类接口规律推得,建议后续用真实能力核对。
 
 free:
   quote.by_symbol:       { rpm: 10, batch: 5 }
@@ -21,7 +21,7 @@ free:
 
 starter:
   quote.by_symbol:       { rpm: 60, batch: 50 }
-  quote.batch:           { rpm: 60, batch: 50 }   # [新增-推断] 批量行情(同 by_symbol 限速,FAQ:Starter+ 含批量)
+  quote.batch:           { rpm: 60, batch: 50 }   # [新增-推断] 批量行情(同 by_symbol 限速)
   quote.pool:            { rpm: 20 }
   kline.daily.batch:     { rpm: 30, batch: 100 }
   kline.daily.by_symbol: { rpm: 60, batch: 1 }

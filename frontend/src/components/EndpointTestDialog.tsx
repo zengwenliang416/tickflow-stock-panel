@@ -22,7 +22,7 @@ export function EndpointTestDialog({ hasKey, tierLabel, currentEndpoint, onClose
   const [testing, setTesting] = useState<Record<string, boolean>>({})
   const [switching, setSwitching] = useState<string | null>(null)
 
-  // 动态加载端点清单 —— 前端无法跨域直连 tickflow.org,走后端代理
+  // 动态加载端点清单 —— 前端无法跨域直连远程清单,走后端代理
   const { data, isLoading } = useQuery({
     queryKey: QK.endpoints,
     queryFn: api.listEndpoints,
@@ -53,7 +53,7 @@ export function EndpointTestDialog({ hasKey, tierLabel, currentEndpoint, onClose
 
   const anyTesting = Object.values(testing).some(Boolean)
   const isFree = !hasKey
-  // 专线端点需 Expert 及以上套餐;Free 模式必然不可用
+  // 专线端点需要专线能力;基础模式不可用
   const canUsePremium = !isFree && tierRank(tierLabel) >= EXPERT_RANK
   const currentLabel = endpoints.find(ep => ep.url === currentEndpoint)?.label ?? currentEndpoint
 
@@ -95,12 +95,12 @@ export function EndpointTestDialog({ hasKey, tierLabel, currentEndpoint, onClose
             </div>
             <div className="flex items-center gap-3">
               {isFree && (
-                <span className="text-[10px] px-2 py-0.5 rounded bg-warning/10 text-warning/80">Free 模式</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-warning/10 text-warning/80">基础模式</span>
               )}
               <button
                 onClick={testAll}
                 disabled={isFree || anyTesting || endpoints.length === 0}
-                title={isFree ? 'Free 模式不可使用付费端点，请先配置 API Key' : undefined}
+                title={isFree ? '基础模式不可切换远程端点，请先配置 API Key' : undefined}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-btn bg-accent/15 text-accent text-xs font-medium hover:bg-accent/25 disabled:opacity-50 transition-colors"
               >
                 {anyTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
@@ -120,11 +120,11 @@ export function EndpointTestDialog({ hasKey, tierLabel, currentEndpoint, onClose
             <span className="text-[10px] text-muted font-mono ml-auto">{currentEndpoint.replace('https://', '')}</span>
           </div>
 
-          {/* Free 模式提示 —— 以下均为 Starter+ 付费端点 */}
+          {/* 基础模式提示 */}
           {isFree && (
             <div className="mx-4 mt-2 px-3 py-1.5 rounded-btn bg-warning/8 border border-warning/20 shrink-0">
               <span className="text-[10px] text-warning/80 leading-snug">
-                以下均为 Starter+ 付费端点，Free 模式不可使用。配置 API Key 后可自动切换并测速选优。
+                基础模式不可切换远程端点。配置 API Key 后可自动切换并测速选优。
               </span>
             </div>
           )}
@@ -199,16 +199,16 @@ function EpRow({ ep, result, testing, isCurrent, isFree, canUsePremium, switchin
           {/* 中位延迟 —— 测试中/前/后都占位,避免高度跳动 */}
           <span className="ml-auto shrink-0 text-sm font-mono font-medium tabular-nums leading-none">
             {isFree ? (
-              // Free 模式:普通付费端点需 Starter+,premium 端点需 Expert+
+              // 基础模式:远程端点需对应数据能力
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium font-sans ${
                   isPremium
                     ? 'bg-warning/15 text-warning'
                     : 'bg-muted/10 text-muted/70'
                 }`}
-                title={isPremium ? '需 Expert 及以上套餐' : '需 Starter+ 套餐'}
+                title={isPremium ? '需要专线端点能力' : '需要远程端点能力'}
               >
-                {isPremium ? 'Expert+' : 'Starter+'}
+                {isPremium ? '专线' : '需 Key'}
               </span>
             ) : testing ? (
               <span className="text-[11px] text-muted animate-pulse">测试中…</span>
@@ -238,15 +238,15 @@ function EpRow({ ep, result, testing, isCurrent, isFree, canUsePremium, switchin
         </div>
       </div>
 
-      {/* 应用按钮区域 —— Free 模式不可用任何付费端点；专线端点需 Expert+ */}
+      {/* 应用按钮区域 —— 基础模式不可用远程端点；专线端点需要专线能力 */}
       {isFree ? null : (isPremium && !canUsePremium) ? (
-        // 专线端点:需 Expert 及以上套餐权限,当前套餐不足,不可应用
+        // 专线端点:当前能力不足,不可应用
         <span
           className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-btn text-[11px] font-medium bg-warning/10 text-warning/70 cursor-not-allowed select-none mt-0.5"
-          title="需要 Expert 及以上套餐的专线加速权限"
+          title="需要专线加速权限"
         >
           <Crown className="h-3 w-3" />
-          Expert+
+          专线
         </span>
       ) : canApply ? (
         <button
