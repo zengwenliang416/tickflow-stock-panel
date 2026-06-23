@@ -142,6 +142,35 @@ def _quote_row(item: dict) -> dict | None:
     }
 
 
+def _fetch_realtime_stock_quote_page(
+    page: int,
+    page_size: int,
+    fields: str,
+    fs: str,
+) -> tuple[int, list[dict]]:
+    query = urlencode({
+        "pn": page,
+        "pz": page_size,
+        "po": 1,
+        "np": 1,
+        "ut": EASTMONEY_UT,
+        "fltt": 2,
+        "invt": 2,
+        "fid": "f3",
+        "fs": fs,
+        "fields": fields,
+    }, safe=",:+")
+    data = _get_eastmoney_clist(query)
+    payload = data.get("data") or {}
+    total = int(payload.get("total") or 0)
+    rows = []
+    for item in payload.get("diff") or []:
+        row = _quote_row(item)
+        if row:
+            rows.append(row)
+    return total, rows
+
+
 def fetch_realtime_stock_quotes() -> list[dict]:
     """拉取沪深京 A 股实时行情。"""
     fields = "f12,f13,f14,f2,f3,f4,f5,f6,f7,f17,f15,f16,f18,f8,f10"
@@ -149,35 +178,22 @@ def fetch_realtime_stock_quotes() -> list[dict]:
     fs = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
     # push2delay currently caps every page to 100 rows even when pz is larger.
     page_size = 100
-    page = 1
-    rows: list[dict] = []
-    total = None
-
-    while True:
-        query = urlencode({
-            "pn": page,
-            "pz": page_size,
-            "po": 1,
-            "np": 1,
-            "ut": EASTMONEY_UT,
-            "fltt": 2,
-            "invt": 2,
-            "fid": "f3",
-            "fs": fs,
-            "fields": fields,
-        }, safe=",:+")
-        data = _get_eastmoney_clist(query)
-        payload = data.get("data") or {}
-        total = total or int(payload.get("total") or 0)
-        diff = payload.get("diff") or []
-        for item in diff:
-            row = _quote_row(item)
-            if row:
-                rows.append(row)
-        if not diff or len(rows) >= total:
-            break
-        page += 1
-
+    total, rows = _fetch_realtime_stock_quote_page(1, page_size, fields, fs)
+    if not rows or len(rows) >= total:
+        return rows
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {
+            pool.submit(_fetch_realtime_stock_quote_page, page, page_size, fields, fs): page
+            for page in range(2, total_pages + 1)
+        }
+        for fut in as_completed(futures):
+            page = futures[fut]
+            try:
+                _, page_rows = fut.result()
+                rows.extend(page_rows)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("free quote page %d failed: %s", page, e)
     return rows
 
 
