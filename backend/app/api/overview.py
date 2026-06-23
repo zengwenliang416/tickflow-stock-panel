@@ -205,6 +205,26 @@ def _board(symbol: str) -> str:
     return "其他"
 
 
+def _limit_pct(symbol: str, name: str | None = None) -> float:
+    upper_name = (name or "").upper()
+    if "ST" in upper_name:
+        return 0.05
+    if symbol.endswith(".BJ"):
+        return 0.30
+    if symbol.startswith(("300", "301", "688", "689")):
+        return 0.20
+    return 0.10
+
+
+def _is_limit_move(row: dict, is_up: bool) -> bool:
+    change = _finite(row.get("change_pct"))
+    if change is None or abs(change) > 0.35:
+        return False
+    threshold = _limit_pct(str(row.get("symbol") or ""), str(row.get("name") or ""))
+    eps = 0.0005
+    return change >= threshold - eps if is_up else change <= -threshold + eps
+
+
 def _score(value: float, low: float, high: float) -> int:
     if high <= low:
         return 50
@@ -404,10 +424,12 @@ def _build_overview(request: Request, as_of: date | None = None) -> dict:
     strong_up = sum(1 for v in pct_values if v >= 0.03)
     strong_down = sum(1 for v in pct_values if v <= -0.03)
 
-    limit_up = sum(1 for r in rows if bool(r.get("signal_limit_up")) or (_finite(r.get("consecutive_limit_ups")) or 0) > 0)
+    limit_up = sum(1 for r in rows if bool(r.get("signal_limit_up")) or (_finite(r.get("consecutive_limit_ups")) or 0) > 0 or _is_limit_move(r, True))
     broken = sum(1 for r in rows if bool(r.get("signal_broken_limit_up")))
-    limit_down = sum(1 for r in rows if bool(r.get("signal_limit_down")))
+    limit_down = sum(1 for r in rows if bool(r.get("signal_limit_down")) or _is_limit_move(r, False))
     max_boards = max([int(_finite(r.get("consecutive_limit_ups")) or 0) for r in rows], default=0)
+    if max_boards == 0 and limit_up > 0:
+        max_boards = 1
 
     # 五档 sealed 修正: 假涨停/假跌停不计入(需 Pro+ depth5.batch 能力)
     depth_svc = getattr(request.app.state, "depth_service", None)
@@ -461,6 +483,8 @@ def _build_overview(request: Request, as_of: date | None = None) -> dict:
     tiers_map: dict[int, int] = {}
     for r in rows:
         n = int(_finite(r.get("consecutive_limit_ups")) or 0)
+        if n <= 0 and _is_limit_move(r, True):
+            n = 1
         if n > 0:
             tiers_map[n] = tiers_map.get(n, 0) + 1
     tiers = [{"boards": k, "count": v} for k, v in sorted(tiers_map.items(), key=lambda item: -item[0])]
