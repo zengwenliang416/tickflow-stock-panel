@@ -17,7 +17,7 @@ import polars as pl
 logger = logging.getLogger(__name__)
 
 EASTMONEY_UT = "bd1d9ddb04089700cf9c27f6f7426281"
-EASTMONEY_CLIST_HOSTS = ("push2delay.eastmoney.com", "push2.eastmoney.com")
+EASTMONEY_QUOTE_HOSTS = ("push2delay.eastmoney.com", "push2.eastmoney.com")
 CORE_INDEX_SYMBOLS = ("000001.SH", "399001.SZ", "399006.SZ", "000680.SH")
 CORE_INDEX_NAMES = {
     "000001.SH": "上证指数",
@@ -60,12 +60,25 @@ def _get_json(url: str, timeout: float = 10.0) -> dict:
 
 def _get_eastmoney_clist(query: str) -> dict:
     last_exc: Exception | None = None
-    for host in EASTMONEY_CLIST_HOSTS:
+    for host in EASTMONEY_QUOTE_HOSTS:
         try:
             return _get_json(f"https://{host}/api/qt/clist/get?{query}")
         except Exception as e:  # noqa: BLE001
             last_exc = e
             logger.debug("free clist host failed %s: %s", host, e)
+    if last_exc:
+        raise last_exc
+    return {}
+
+
+def _get_eastmoney_stock(query: str) -> dict:
+    last_exc: Exception | None = None
+    for host in EASTMONEY_QUOTE_HOSTS:
+        try:
+            return _get_json(f"https://{host}/api/qt/stock/get?{query}")
+        except Exception as e:  # noqa: BLE001
+            last_exc = e
+            logger.debug("free stock host failed %s: %s", host, e)
     if last_exc:
         raise last_exc
     return {}
@@ -175,7 +188,7 @@ def fetch_realtime_index_quotes(symbols: list[str] | None = None) -> list[dict]:
     for symbol in symbols:
         query = urlencode({"secid": _secid(symbol), "fltt": 2, "fields": fields})
         try:
-            data = _get_json(f"https://push2.eastmoney.com/api/qt/stock/get?{query}")
+            data = _get_eastmoney_stock(query)
         except Exception as e:  # noqa: BLE001
             logger.warning("free index quote failed for %s: %s", symbol, e)
             continue
