@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir uv
 
 # Backend deps
 COPY backend/pyproject.toml backend/uv.lock* ./
-RUN uv sync --frozen --no-dev || uv sync --no-dev
+RUN uv sync --frozen --no-dev --no-install-project || uv sync --no-dev --no-install-project
 
 # Backend code
 COPY backend/app ./app
@@ -27,5 +27,6 @@ COPY tiers.yaml /app/tiers.yaml
 COPY --from=frontend-builder /build/dist ./static
 
 ENV PYTHONPATH=/app
+ENV STATIC_DIR=/app/static
 EXPOSE 3018
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3018"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3018"]
