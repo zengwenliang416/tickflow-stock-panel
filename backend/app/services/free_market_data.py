@@ -17,6 +17,7 @@ import polars as pl
 logger = logging.getLogger(__name__)
 
 EASTMONEY_UT = "bd1d9ddb04089700cf9c27f6f7426281"
+EASTMONEY_CLIST_HOSTS = ("push2delay.eastmoney.com", "push2.eastmoney.com")
 CORE_INDEX_SYMBOLS = ("000001.SH", "399001.SZ", "399006.SZ", "000680.SH")
 CORE_INDEX_NAMES = {
     "000001.SH": "上证指数",
@@ -52,6 +53,19 @@ def _get_json(url: str, timeout: float = 10.0) -> dict:
                 except Exception as e:  # noqa: BLE001
                     last_exc = e
                     time.sleep(0.3 * (attempt + 1))
+    if last_exc:
+        raise last_exc
+    return {}
+
+
+def _get_eastmoney_clist(query: str) -> dict:
+    last_exc: Exception | None = None
+    for host in EASTMONEY_CLIST_HOSTS:
+        try:
+            return _get_json(f"https://{host}/api/qt/clist/get?{query}")
+        except Exception as e:  # noqa: BLE001
+            last_exc = e
+            logger.debug("free clist host failed %s: %s", host, e)
     if last_exc:
         raise last_exc
     return {}
@@ -120,7 +134,8 @@ def fetch_realtime_stock_quotes() -> list[dict]:
     fields = "f12,f13,f14,f2,f3,f4,f5,f6,f7,f17,f15,f16,f18,f8,f10"
     # 沪深 A 股主板/创业板/科创板。先使用稳定市场片段,避免扩展片段导致整页失败。
     fs = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
-    page_size = 5000
+    # push2delay currently caps every page to 100 rows even when pz is larger.
+    page_size = 100
     page = 1
     rows: list[dict] = []
     total = None
@@ -138,7 +153,7 @@ def fetch_realtime_stock_quotes() -> list[dict]:
             "fs": fs,
             "fields": fields,
         }, safe=",:+")
-        data = _get_json(f"https://push2.eastmoney.com/api/qt/clist/get?{query}")
+        data = _get_eastmoney_clist(query)
         payload = data.get("data") or {}
         total = total or int(payload.get("total") or 0)
         diff = payload.get("diff") or []
