@@ -5,11 +5,10 @@
 """
 from __future__ import annotations
 
-import os
-
 from tickflow import AsyncTickFlow, TickFlow
 
 from app import secrets_store
+from app.config import settings
 
 _sync_client: TickFlow | None = None
 _async_client: AsyncTickFlow | None = None
@@ -55,6 +54,8 @@ def reset_clients() -> None:
 
 def current_mode() -> str:
     """供 UI 显示当前模式。"""
+    if settings.use_longbridge:
+        return "longbridge"
     return "api_key" if secrets_store.get_tickflow_key() else "free"
 
 

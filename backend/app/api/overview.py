@@ -32,6 +32,17 @@ CORE_INDEX_SYMBOLS = tuple(CORE_INDEX_NAMES.keys())
 _DIMENSION_SEP = re.compile(r"[、,，;；|/\s]+")
 
 
+def _core_index_names() -> dict[str, str]:
+    if settings.use_longbridge:
+        from app.services import longbridge_market_data
+        return dict(longbridge_market_data.CORE_INDEX_NAMES)
+    return dict(CORE_INDEX_NAMES)
+
+
+def _core_index_symbols() -> tuple[str, ...]:
+    return tuple(_core_index_names().keys())
+
+
 def _dimension_field(config: ExtConfig, kind: str) -> str | None:
     candidates = ["概念", "concept", "theme"] if kind == "concept" else ["行业", "industry", "sector"]
     for candidate in candidates:
@@ -192,6 +203,10 @@ def _json_safe(value: Any) -> Any:
 
 
 def _board(symbol: str) -> str:
+    if symbol.endswith(".US"):
+        return "美股"
+    if symbol.endswith(".HK"):
+        return "港股"
     if symbol.endswith(".BJ"):
         return "北交所"
     if symbol.startswith(("300", "301")):
@@ -239,17 +254,19 @@ def _quote_status(request: Request) -> dict:
 
 
 def _index_quotes(request: Request, as_of: date | None = None) -> list[dict]:
+    index_names = _core_index_names()
+    index_symbols = _core_index_symbols()
     qs = getattr(request.app.state, "quote_service", None)
     rows: list[dict] = []
     if qs and as_of is None:
-        df = qs.get_index_quotes(list(CORE_INDEX_SYMBOLS))
+        df = qs.get_index_quotes(list(index_symbols))
         if not df.is_empty():
             rows = df.to_dicts()
 
     if not rows:
         repo = getattr(request.app.state, "repo", None)
         if repo:
-            placeholders = ", ".join("?" for _ in CORE_INDEX_SYMBOLS)
+            placeholders = ", ".join("?" for _ in index_symbols)
             try:
                 db_rows = repo.execute_all(
                     f"""
@@ -271,7 +288,7 @@ def _index_quotes(request: Request, as_of: date | None = None) -> list[dict]:
                     SELECT symbol, date, last_price, prev_close
                     FROM latest
                     """,
-                    [*CORE_INDEX_SYMBOLS, as_of, as_of],
+                    [*index_symbols, as_of, as_of],
                 )
             except Exception:  # noqa: BLE001
                 db_rows = []
@@ -285,7 +302,7 @@ def _index_quotes(request: Request, as_of: date | None = None) -> list[dict]:
                     change_pct = change_amount / pc * 100
                 rows.append({
                     "symbol": symbol,
-                    "name": CORE_INDEX_NAMES.get(symbol),
+                    "name": index_names.get(symbol),
                     "date": str(dt) if dt else None,
                     "last_price": lp,
                     "close": lp,
@@ -296,11 +313,11 @@ def _index_quotes(request: Request, as_of: date | None = None) -> list[dict]:
 
     by_symbol = {r.get("symbol"): r for r in rows}
     out = []
-    for symbol in CORE_INDEX_SYMBOLS:
+    for symbol in index_symbols:
         r = by_symbol.get(symbol, {"symbol": symbol})
         out.append({
             "symbol": symbol,
-            "name": r.get("name") or CORE_INDEX_NAMES[symbol],
+            "name": r.get("name") or index_names[symbol],
             "last_price": _finite(r.get("last_price") if r.get("last_price") is not None else r.get("close")),
             "change_pct": _finite(r.get("change_pct")),
             "change_amount": _finite(r.get("change_amount")),
@@ -355,14 +372,18 @@ def _build_overview(request: Request, as_of: date | None = None) -> dict:
     repo = request.app.state.repo
     svc = ScreenerService(repo)
     requested_as_of = as_of
-    if as_of is None and settings.use_free_mode and svc.latest_date() is None:
+    latest_date = svc.latest_date()
+    if as_of is None and (settings.use_free_mode or settings.use_longbridge):
         qs = getattr(request.app.state, "quote_service", None)
-        if qs:
+        status = qs.status() if qs else {}
+        missing_indices = settings.use_longbridge and not status.get("index_symbol_count")
+        if qs and (latest_date is None or missing_indices):
             try:
                 qs.refresh()
+                latest_date = svc.latest_date()
             except Exception:  # noqa: BLE001
                 pass
-    as_of = as_of or svc.latest_date()
+    as_of = as_of or latest_date
     status = _quote_status(request)
     indices = _index_quotes(request, requested_as_of)
 

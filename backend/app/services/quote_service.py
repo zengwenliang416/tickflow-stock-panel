@@ -27,6 +27,7 @@ import logging
 import threading
 import time
 from datetime import date, datetime, time as dt_time
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -282,7 +283,11 @@ class QuoteService:
         try:
             all_index_symbols = set(self._repo.get_index_symbol_set()) if self._repo else set()
             all_index_symbols.update(self.CORE_INDEX_SYMBOLS)
-            if settings.use_free_mode:
+            if settings.use_longbridge:
+                from app.services import longbridge_market_data
+                all_index_symbols.update(longbridge_market_data.CORE_INDEX_SYMBOLS)
+                records = longbridge_market_data.fetch_realtime_quotes()
+            elif settings.use_free_mode:
                 from app.services import free_market_data
                 records = free_market_data.fetch_realtime_quotes()
             else:
@@ -467,6 +472,23 @@ class QuoteService:
 
     @staticmethod
     def _is_trading_hours() -> bool:
+        from app.config import settings
+
+        if settings.use_longbridge:
+            hk_now = datetime.now(ZoneInfo("Asia/Hong_Kong"))
+            hk_time = hk_now.time()
+            hk_open = (
+                hk_now.weekday() < 5
+                and (
+                    dt_time(9, 15) <= hk_time <= dt_time(12, 10)
+                    or dt_time(12, 55) <= hk_time <= dt_time(16, 15)
+                )
+            )
+            us_now = datetime.now(ZoneInfo("America/New_York"))
+            us_time = us_now.time()
+            us_open = us_now.weekday() < 5 and dt_time(4, 0) <= us_time <= dt_time(20, 5)
+            return hk_open or us_open
+
         now = datetime.now()
         t = now.time()
         morning = dt_time(9, 15) <= t <= dt_time(11, 35)

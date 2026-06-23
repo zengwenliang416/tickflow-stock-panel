@@ -83,6 +83,17 @@ def sync_daily_batch(symbols: list[str],
     优先使用 start_time / end_time 区间 + count=10000,确保覆盖完整时间段。
     仅传 count 时按条数回溯。
     """
+    if settings.use_longbridge:
+        from app.services import longbridge_market_data
+        df = longbridge_market_data.fetch_daily_batch(
+            symbols,
+            count=count,
+            start_time=start_time,
+            end_time=end_time,
+            on_chunk_done=on_chunk_done,
+        )
+        return filter_halt_days(df) if not df.is_empty() else df
+
     if settings.use_free_mode:
         from app.services import free_market_data
         df = free_market_data.fetch_daily_batch(
@@ -205,7 +216,18 @@ def sync_daily_by_quotes(repo: KlineRepository) -> int:
     返回写入的行数。
     """
     today = date.today()
-    if settings.use_free_mode:
+    if settings.use_longbridge:
+        from app.services import instrument_sync, longbridge_market_data
+        try:
+            records = longbridge_market_data.fetch_realtime_stock_quotes()
+            if records:
+                instrument_sync.save_instruments_from_quotes(repo.store.data_dir, records)
+                repo.refresh_instruments_cache()
+            daily_df = longbridge_market_data.records_to_daily(records)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Longbridge quotes daily failed: %s", e)
+            return 0
+    elif settings.use_free_mode:
         from app.services import free_market_data, instrument_sync
         try:
             records = free_market_data.fetch_realtime_stock_quotes()

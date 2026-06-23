@@ -86,6 +86,14 @@ def fetch_quotes(symbols: list[str], capset: CapabilitySet, timeout_s: float = 8
     if not symbols:
         return []
 
+    if settings.use_longbridge:
+        from app.services import longbridge_market_data
+        rows = longbridge_market_data.fetch_realtime_quotes_by_symbols(symbols)
+        for row in rows:
+            row["price"] = row.get("last_price")
+            row["pct"] = row.get("change_pct")
+        return rows
+
     tf = get_client()
     quotes: list[dict] = []
 

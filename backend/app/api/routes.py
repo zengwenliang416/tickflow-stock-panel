@@ -15,7 +15,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "version": __version__,
-        "mode": "free" if settings.use_free_mode else "api_key",
+        "mode": "longbridge" if settings.use_longbridge else ("free" if settings.use_free_mode else "api_key"),
     }
 
 

@@ -26,11 +26,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _data_mode_label() -> str:
+    if settings.use_longbridge:
+        return "longbridge"
+    return "free" if settings.use_free_mode else "api_key"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
         "A-share quant panel v%s starting (mode=%s)",
-        __version__, "free" if settings.use_free_mode else "api_key",
+        __version__, _data_mode_label(),
     )
 
     # 数据层

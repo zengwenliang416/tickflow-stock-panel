@@ -16,7 +16,7 @@ export const CAP_LABELS: Record<string, { name: string; hint: string }> = {
 
 // 能力等级 —— 用于按能力门控功能(如专线端点 / 按月扩展分钟K)。
 // 基础档提取与后端 quote_service.py 一致:取 label 第一个词("Pro +" → "pro")。
-export const TIER_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2, expert: 3 }
+export const TIER_RANK: Record<string, number> = { free: 0, longbridge: 1, starter: 1, pro: 2, expert: 3 }
 export const EXPERT_RANK = TIER_RANK.expert
 
 export function tierRank(label: string): number {
@@ -42,6 +42,12 @@ const TIER_STYLE: Record<string, TierStyle> = {
     tagBg: { background: 'rgba(113,113,122,0.3)' },
     dotStyle: { background: '#71717a' },
     labelTextStyle: { color: '#a1a1aa' },
+  },
+  longbridge: {
+    desc: '港美股实时 · 自选池',
+    tagBg: { background: 'rgba(59,130,246,0.2)' },
+    dotStyle: { background: '#3b82f6' },
+    labelTextStyle: { color: '#60a5fa' },
   },
   starter: {
     desc: '批量同步 · 行情池',

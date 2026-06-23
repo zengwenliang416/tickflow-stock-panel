@@ -64,6 +64,15 @@ def _quotes_to_index_instruments(resp) -> pl.DataFrame:
 
 def sync_index_instruments(repo: KlineRepository) -> int:
     """同步 CN_Index 指数标的维表，返回指数数量。"""
+    if settings.use_longbridge:
+        from app.services import longbridge_market_data
+        instruments = longbridge_market_data.fetch_index_instruments()
+        if instruments.is_empty():
+            return 0
+        repo.save_index_instruments(instruments)
+        repo.refresh_index_views()
+        return instruments.height
+
     if settings.use_free_mode:
         from app.services import free_market_data
         instruments = free_market_data.fetch_index_instruments()

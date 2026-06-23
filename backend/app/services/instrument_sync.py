@@ -13,6 +13,7 @@ from pathlib import Path
 
 import polars as pl
 
+from app.config import settings
 from app.tickflow.client import get_client
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,15 @@ def sync_instruments(data_dir: Path) -> int:
 
     返回写入的行数。
     """
+    if settings.use_longbridge:
+        try:
+            from app.services import longbridge_market_data
+            df = longbridge_market_data.fetch_instruments()
+            return _write_instruments(data_dir, df, "Longbridge instruments")
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Longbridge instruments sync failed: %s", e)
+            return 0
+
     tf = get_client()
     all_rows: list[dict] = []
 
@@ -71,12 +81,16 @@ def sync_instruments(data_dir: Path) -> int:
 
     df = pl.DataFrame(all_rows)
     df = df.with_columns(pl.lit(date.today()).alias("as_of"))
+    return _write_instruments(data_dir, df, "instruments synced")
 
+
+def _write_instruments(data_dir: Path, df: pl.DataFrame, label: str) -> int:
+    if df.is_empty():
+        return 0
     out = data_dir / "instruments" / "instruments.parquet"
     out.parent.mkdir(parents=True, exist_ok=True)
     df.write_parquet(out)
-
-    logger.info("instruments synced: %d rows → %s", df.height, out)
+    logger.info("%s: %d rows → %s", label, df.height, out)
     return df.height
 
 
@@ -84,17 +98,13 @@ def save_instruments_from_quotes(data_dir: Path, quotes_data: list[dict]) -> int
     """用免费行情/实时行情里的 symbol/name 生成 instruments 维表。"""
     if not quotes_data:
         return 0
-    from app.services import free_market_data
-
-    df = free_market_data.records_to_instruments(quotes_data, asset_type="stock")
-    if df.is_empty():
-        return 0
-
-    out = data_dir / "instruments" / "instruments.parquet"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    df.write_parquet(out)
-    logger.info("instruments synced from quotes: %d rows → %s", df.height, out)
-    return df.height
+    if settings.use_longbridge:
+        from app.services import longbridge_market_data
+        df = longbridge_market_data.records_to_instruments(quotes_data, asset_type="stock")
+    else:
+        from app.services import free_market_data
+        df = free_market_data.records_to_instruments(quotes_data, asset_type="stock")
+    return _write_instruments(data_dir, df, "instruments synced from quotes")
 
 
 def enrich_names_from_quotes(

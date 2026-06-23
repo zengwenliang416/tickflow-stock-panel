@@ -30,7 +30,8 @@ _CAPSET_CACHE_FILE = "capabilities.json"
 # v2: 拆分 depth5 → depth5(单只) + depth5.batch(批量)
 # v3: 探测补全 quote.batch(此前 tiers.yaml 声明了但 _probe_real 漏探测)
 # v4: 无 Key 基础模式接入免费公开行情源,增加批量行情/日K运行能力
-_CACHE_SCHEMA_VERSION = 4
+# v5: Longbridge provider, OAuth quote/kline/watchlist capabilities
+_CACHE_SCHEMA_VERSION = 5
 
 # 探测用最小代价请求:挑流通性最好的 1 只标的试
 _PROBE_SYMBOL = "600000.SH"  # 浦发银行,长期不会退市
@@ -69,6 +70,16 @@ def _free_market_capset(tiers: dict) -> CapabilitySet:
     caps[Cap.QUOTE_BATCH] = CapabilityLimits(rpm=60, batch=5000)
     caps[Cap.QUOTE_POOL] = CapabilityLimits(rpm=30, batch=5000)
     caps[Cap.KLINE_DAILY_BATCH] = CapabilityLimits(rpm=120, batch=50)
+    return CapabilitySet(caps)
+
+
+def _longbridge_capset(tiers: dict) -> CapabilitySet:
+    caps = _tier_to_capset(tiers["free"]).all()
+    caps[Cap.QUOTE_BY_SYMBOL] = CapabilityLimits(rpm=120, batch=100)
+    caps[Cap.QUOTE_BATCH] = CapabilityLimits(rpm=120, batch=100)
+    caps[Cap.QUOTE_POOL] = CapabilityLimits(rpm=60, batch=100)
+    caps[Cap.KLINE_DAILY_BY_SYMBOL] = CapabilityLimits(rpm=120, batch=1)
+    caps[Cap.KLINE_DAILY_BATCH] = CapabilityLimits(rpm=60, batch=20)
     return CapabilitySet(caps)
 
 
@@ -259,6 +270,17 @@ def detect_capabilities(force: bool = False) -> CapabilitySet:
                     cached.get("schema_version"), _CACHE_SCHEMA_VERSION)
 
     tiers = _load_tiers_yaml()
+    if settings.use_longbridge:
+        capset = _longbridge_capset(tiers)
+        _persist(
+            capset,
+            "Longbridge",
+            log=["Longbridge OAuth 数据源", "✓ 实时行情/日K/自选池"],
+            missing=[],
+            extras=["longbridge_market_data"],
+        )
+        return capset
+
     if settings.use_free_mode:
         capset = _free_market_capset(tiers)
         _persist(

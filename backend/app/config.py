@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Data provider
     tickflow_api_key: str = Field(default="", description="留空启用基础模式")
+    market_data_provider: str = Field(default="longbridge", description="longbridge | tickflow | free")
 
     # AI
     ai_provider: str = "openai_compat"
@@ -52,8 +53,16 @@ class Settings(BaseSettings):
         return self
 
     @property
+    def use_longbridge(self) -> bool:
+        return self.market_data_provider.strip().lower() == "longbridge"
+
+    @property
     def use_free_mode(self) -> bool:
         """是否走基础模式。优先看 secrets.json,其次看 .env。"""
+        if self.use_longbridge:
+            return False
+        if self.market_data_provider.strip().lower() == "free":
+            return True
         from app import secrets_store
         return not secrets_store.get_tickflow_key()
 

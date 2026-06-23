@@ -13,4 +13,5 @@ services:
     volumes:
       - ./data:/app/data
       - ./tiers.yaml:/app/tiers.yaml:ro
+      - ${LONGBRIDGE_OPENAPI_DIR:-/root/.longbridge/openapi}:/root/.longbridge/openapi
     restart: unless-stopped

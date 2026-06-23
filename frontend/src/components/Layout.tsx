@@ -148,6 +148,12 @@ function TierBadge({ label, hasKey }: { label: string; hasKey?: boolean }) {
       dotStyle: { background: '#71717a' },
       labelTextStyle: { color: '#a1a1aa' },
     },
+    longbridge: {
+      desc: '港美股实时 · 自选池',
+      tagBg: { background: 'rgba(59,130,246,0.2)' },
+      dotStyle: { background: '#3b82f6' },
+      labelTextStyle: { color: '#60a5fa' },
+    },
     starter: {
       desc: '批量同步 · 行情池',
       tagBg: { background: 'rgba(59,130,246,0.2)' },
@@ -356,7 +362,7 @@ export function Layout() {
 
           <TierBadge
             label={caps?.label ?? ''}
-            hasKey={settingsState?.mode === 'api_key'}
+            hasKey={settingsState?.mode === 'api_key' || settingsState?.mode === 'longbridge'}
           />
           <AIConfigBadge
             configured={settingsState?.has_ai_key}

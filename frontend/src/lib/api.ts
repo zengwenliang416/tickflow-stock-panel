@@ -549,7 +549,7 @@ export interface EndpointManifest {
 }
 
 export interface SettingsState {
-  mode: 'free' | 'api_key'
+  mode: 'free' | 'api_key' | 'longbridge'
   tickflow_api_key_masked: string
   has_tickflow_key: boolean
   tier_label: string

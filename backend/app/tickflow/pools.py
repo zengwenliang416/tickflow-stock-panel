@@ -85,6 +85,16 @@ def _fetch_pool(pool_id: PoolId) -> list[str]:
             logger.warning("free pool fetch failed for %s: %s", pool_id, e)
             return []
 
+    if settings.use_longbridge:
+        try:
+            from app.services import longbridge_market_data
+            if pool_id == "CN_Index":
+                return list(longbridge_market_data.CORE_INDEX_SYMBOLS)
+            return longbridge_market_data.watchlist_symbols()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Longbridge pool fetch failed for %s: %s", pool_id, e)
+            return []
+
     tf = get_client()
 
     if pool_id in _POOL_NAME_HINTS:

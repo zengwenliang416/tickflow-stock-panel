@@ -63,6 +63,7 @@ export function SettingsKeysPanel() {
   const mode = settings.data?.mode
   const masked = settings.data?.tickflow_api_key_masked
   const capCount = caps.data ? Object.keys(caps.data.capabilities).length : 0
+  const isLongbridge = mode === 'longbridge'
 
   return (
     <>
@@ -79,7 +80,12 @@ export function SettingsKeysPanel() {
               <div className="min-w-0">
                 <div className="text-[10px] uppercase tracking-widest text-muted">状态</div>
                 <div className="mt-1 flex items-center gap-2 min-w-0">
-                  {mode === 'api_key' ? (
+                  {isLongbridge ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-bear shrink-0" />
+                      <span className="text-sm font-medium shrink-0">Longbridge 已连接</span>
+                    </>
+                  ) : mode === 'api_key' ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-bear shrink-0" />
                       <span className="text-sm font-medium shrink-0">已配置</span>
@@ -116,7 +122,7 @@ export function SettingsKeysPanel() {
               <div className="relative">
                 <input
                   type={revealing ? 'text' : 'password'}
-                  placeholder={mode === 'api_key' ? '粘贴新 Key 替换当前' : '粘贴数据源 API Key'}
+                  placeholder={isLongbridge ? 'Longbridge 使用本机 OAuth，无需填写 TickFlow Key' : (mode === 'api_key' ? '粘贴新 Key 替换当前' : '粘贴数据源 API Key')}
                   value={keyInput}
                   onChange={(e) => { setKeyInput(e.target.value); if (saved) setSaved(false) }}
                   className="w-full px-3 py-2 pr-9 rounded-input bg-base border border-border text-sm font-mono focus:outline-none focus:border-accent transition-colors duration-150 ease-smooth"
