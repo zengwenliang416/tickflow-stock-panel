@@ -28,7 +28,7 @@ export function isExpertOrAbove(label: string): boolean {
   return tierRank(label) >= EXPERT_RANK
 }
 
-/** 档位完整样式(tag 背景 + 圆点 + 文字渐变), 与左侧菜单 TierBadge 一致 */
+/** 档位完整样式(tag 背景 + 圆点 + 文字渐变), 用于设置页能力展示 */
 export interface TierStyle {
   tagBg: { background: string }
   dotStyle: { background: string }
@@ -87,7 +87,7 @@ export function tierTextStyle(label: string): { color?: string; background?: str
   return tierStyle(label).labelTextStyle
 }
 
-/** 渲染档位 tag(与左侧菜单一致的胶囊样式) */
+/** 渲染档位 tag */
 export function TierTag({ label, className = '' }: { label: string; className?: string }) {
   const t = tierStyle(label)
   const base = tierBaseName(label)
