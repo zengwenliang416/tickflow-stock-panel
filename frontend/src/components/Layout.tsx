@@ -7,7 +7,6 @@ import { ToastContainer } from '@/components/Toast'
 import { AlertToastContainer } from '@/components/AlertToast'
 import {
   useCapabilities,
-  useSettings,
   usePreferences,
   useQuoteStatus,
   useVersion,
@@ -29,7 +28,6 @@ import {
   TrendingUp,
   Flame,
   BarChart3,
-  Sparkles,
   Layers3,
   Landmark,
   Cable,
@@ -130,39 +128,9 @@ function SidebarIndexQuotes({ rows, items }: { rows: IndexQuote[] | undefined; i
   )
 }
 
-function AIConfigBadge({ configured, model }: { configured?: boolean; model?: string }) {
-  return (
-    <NavLink
-      to="/settings?tab=ai"
-      className="mt-2 group block -mx-2.5"
-      title="AI 配置"
-    >
-      <div className="relative overflow-hidden rounded-lg border border-purple-400/20 bg-gradient-to-br from-purple-500/[0.12] via-surface to-surface px-3 py-2 transition-all hover:border-purple-400/35 hover:from-purple-500/[0.16]">
-        <div className="absolute -right-5 -top-6 h-14 w-14 rounded-full bg-purple-500/10 blur-2xl" />
-        <div className="relative flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-purple-400/10 text-purple-300 ring-1 ring-purple-400/20">
-            <Sparkles className="h-3.5 w-3.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-foreground">AI 配置</span>
-              <span className={`h-1.5 w-1.5 rounded-full ${configured ? 'bg-bear' : 'bg-warning'}`} />
-            </div>
-            <div className="mt-0.5 truncate text-[10px] leading-tight text-muted">
-              {configured ? (model || '已接入模型') : '接入策略生成模型'}
-            </div>
-          </div>
-          <Settings className="h-3 w-3 text-muted group-hover:text-purple-300 transition-colors" />
-        </div>
-      </div>
-    </NavLink>
-  )
-}
-
 export function Layout() {
   // ===== 共享 hooks (替代内联 useQuery) =====
   const { data: caps } = useCapabilities()
-  const { data: settingsState } = useSettings()
   const { data: versionData } = useVersion()
   const { data: prefs } = usePreferences()
   const { data: quoteStatus } = useQuoteStatus()
@@ -274,11 +242,6 @@ export function Layout() {
           <div
             className="mt-3 h-px"
             style={{ background: `linear-gradient(90deg, ${BRAND}88, transparent 80%)` }}
-          />
-
-          <AIConfigBadge
-            configured={settingsState?.has_ai_key}
-            model={settingsState?.ai_model}
           />
         </div>
 
