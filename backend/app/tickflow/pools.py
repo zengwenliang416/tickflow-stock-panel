@@ -74,6 +74,17 @@ def _fetch_pool(pool_id: PoolId) -> list[str]:
 
     实现:先用 universes.list 找到 universe id,再 quotes.get_by_universes 拉成份。
     """
+    if settings.use_free_mode:
+        try:
+            from app.services import free_market_data
+            if pool_id == "CN_Equity_A":
+                return free_market_data.stock_symbols_from_quotes()
+            if pool_id == "CN_Index":
+                return list(free_market_data.CORE_INDEX_SYMBOLS)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("free pool fetch failed for %s: %s", pool_id, e)
+            return []
+
     tf = get_client()
 
     if pool_id in _POOL_NAME_HINTS:

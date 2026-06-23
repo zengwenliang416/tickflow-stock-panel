@@ -1,12 +1,13 @@
 """指数数据同步服务。"""
 from __future__ import annotations
 
-import logging
 import gc
+import logging
 from datetime import datetime, timedelta
 
 import polars as pl
 
+from app.config import settings
 from app.indicators.pipeline import compute_enriched
 from app.services import kline_sync, preferences
 from app.tickflow.capabilities import Cap, CapabilitySet
@@ -63,6 +64,15 @@ def _quotes_to_index_instruments(resp) -> pl.DataFrame:
 
 def sync_index_instruments(repo: KlineRepository) -> int:
     """同步 CN_Index 指数标的维表，返回指数数量。"""
+    if settings.use_free_mode:
+        from app.services import free_market_data
+        instruments = free_market_data.fetch_index_instruments()
+        if instruments.is_empty():
+            return 0
+        repo.save_index_instruments(instruments)
+        repo.refresh_index_views()
+        return instruments.height
+
     tf = get_client()
     resp = None
     errors: list[str] = []

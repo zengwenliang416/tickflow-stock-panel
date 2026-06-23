@@ -111,7 +111,13 @@ def run_now(
     today_exists = latest_daily and latest_daily >= today
     new_daily_days = 0
 
-    if today_exists:
+    if settings.use_free_mode:
+        emit("sync_daily", 12, f"获取日K [{today} ~ {today}] 免费行情快照…")
+        written_daily = kline_sync.sync_daily_by_quotes(repo)
+        new_daily_days = 1 if written_daily else 0
+        emit("sync_daily", 45, f"日K 完成,{written_daily} 只标的")
+        logger.info("sync_daily: [%s ~ %s] free quotes, %d symbols", today, today, written_daily)
+    elif today_exists:
         # 今天有数据（QuoteService 已落盘）→ 实时行情覆写，确保最新
         emit("sync_daily", 12, f"获取日K [{today} ~ {today}] 实时行情…")
         written_daily = kline_sync.sync_daily_by_quotes(repo)

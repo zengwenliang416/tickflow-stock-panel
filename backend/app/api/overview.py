@@ -10,6 +10,7 @@ from typing import Any
 import polars as pl
 from fastapi import APIRouter, Request
 
+from app.config import settings
 from app.services.ext_data import ExtConfig, ExtConfigStore
 from app.services.screener import ScreenerService
 
@@ -333,6 +334,13 @@ def _pct_band_rows(values: list[float]) -> list[dict]:
 def _build_overview(request: Request, as_of: date | None = None) -> dict:
     repo = request.app.state.repo
     svc = ScreenerService(repo)
+    if as_of is None and settings.use_free_mode and svc.latest_date() is None:
+        qs = getattr(request.app.state, "quote_service", None)
+        if qs:
+            try:
+                qs.refresh()
+            except Exception:  # noqa: BLE001
+                pass
     as_of = as_of or svc.latest_date()
     status = _quote_status(request)
     indices = _index_quotes(request, as_of)

@@ -61,7 +61,13 @@ def sync_instruments(data_dir: Path) -> int:
             logger.warning("get_instruments(%s) failed: %s", ex, e)
 
     if not all_rows:
-        return 0
+        try:
+            from app.services import free_market_data
+            quotes = free_market_data.fetch_realtime_stock_quotes()
+            return save_instruments_from_quotes(data_dir, quotes)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("free instruments sync failed: %s", e)
+            return 0
 
     df = pl.DataFrame(all_rows)
     df = df.with_columns(pl.lit(date.today()).alias("as_of"))
@@ -71,6 +77,23 @@ def sync_instruments(data_dir: Path) -> int:
     df.write_parquet(out)
 
     logger.info("instruments synced: %d rows → %s", df.height, out)
+    return df.height
+
+
+def save_instruments_from_quotes(data_dir: Path, quotes_data: list[dict]) -> int:
+    """用免费行情/实时行情里的 symbol/name 生成 instruments 维表。"""
+    if not quotes_data:
+        return 0
+    from app.services import free_market_data
+
+    df = free_market_data.records_to_instruments(quotes_data, asset_type="stock")
+    if df.is_empty():
+        return 0
+
+    out = data_dir / "instruments" / "instruments.parquet"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.write_parquet(out)
+    logger.info("instruments synced from quotes: %d rows → %s", df.height, out)
     return df.height
 
 

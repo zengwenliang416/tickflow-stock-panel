@@ -3,7 +3,7 @@
 集中管理全市场行情拉取 + enriched 缓存，供盘中选股、自选股等所有模块复用。
 
 架构:
-  - 后台线程轮询 TickFlow get_by_universes(["CN_Equity_A", "CN_Index"])
+  - 后台线程轮询当前数据源的全市场行情
   - 拉取行情 → 写 kline_daily (不复权) + 增量计算 enriched → 写盘 + 更新缓存
   - _enriched_cache 是唯一的盘中数据源 (OHLCV + 全套技术指标)
   - _live_agg_cache 是递推状态 (只加载一次, 盘中不变)
@@ -275,53 +275,33 @@ class QuoteService:
 
     def _fetch_quotes(self) -> None:
         """拉取全市场行情 → 写 daily + 计算 enriched + 更新缓存。"""
-        from app.tickflow.client import get_client
-
-        tf = get_client()
+        from app.config import settings
         t0 = time.perf_counter()
         now_ts = time.perf_counter()
 
         try:
             all_index_symbols = set(self._repo.get_index_symbol_set()) if self._repo else set()
             all_index_symbols.update(self.CORE_INDEX_SYMBOLS)
-            resp = tf.quotes.get_by_universes(universes=["CN_Equity_A", "CN_Index"])
+            if settings.use_free_mode:
+                from app.services import free_market_data
+                records = free_market_data.fetch_realtime_quotes()
+            else:
+                try:
+                    from app.tickflow.client import get_client
+                    tf = get_client()
+                    resp = tf.quotes.get_by_universes(universes=["CN_Equity_A", "CN_Index"])
+                    records = self._normalize_tickflow_quotes(resp)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("主数据源行情拉取失败,尝试免费源: %s", e)
+                    from app.services import free_market_data
+                    records = free_market_data.fetch_realtime_quotes()
         except Exception as e:  # noqa: BLE001
             logger.warning("行情拉取失败: %s", e)
             return
 
-        if not resp:
+        if not records:
             logger.warning("行情数据为空")
             return
-
-        # ---- 解析 API 响应 (临时变量, 用完丢弃) ----
-        records = []
-        for q in resp:
-            ext = q.get("ext") or {}
-            last_price = q.get("last_price")
-            prev_close = q.get("prev_close")
-            change_amount = ext.get("change_amount")
-            change_pct = ext.get("change_pct")
-            if change_amount is None and last_price is not None and prev_close is not None:
-                change_amount = float(last_price) - float(prev_close)
-            if change_pct is None and change_amount is not None and prev_close not in (None, 0):
-                change_pct = float(change_amount) / float(prev_close) * 100
-            records.append({
-                "symbol": q.get("symbol"),
-                "name": q.get("name") or ext.get("name"),
-                "last_price": last_price,
-                "prev_close": prev_close,
-                "open": q.get("open"),
-                "high": q.get("high"),
-                "low": q.get("low"),
-                "volume": q.get("volume"),
-                "amount": q.get("amount"),
-                "change_pct": change_pct,
-                "change_amount": change_amount,
-                "amplitude": ext.get("amplitude"),
-                "turnover_rate": ext.get("turnover_rate"),
-                "timestamp": q.get("timestamp"),
-                "session": q.get("session"),
-            })
 
         index_records = [r for r in records if r.get("symbol") in all_index_symbols]
         stock_records = [r for r in records if r.get("symbol") not in all_index_symbols]
@@ -339,6 +319,15 @@ class QuoteService:
             self._index_quotes_cache = self._build_index_quotes(index_records)
 
         logger.info("行情刷新: %d 只股票, %d 只指数, 耗时 %.0fms", len(stock_records), len(index_records), fetch_ms)
+
+        if stock_records and self._repo:
+            try:
+                from app.services import instrument_sync
+                written = instrument_sync.save_instruments_from_quotes(self._repo.store.data_dir, stock_records)
+                if written:
+                    self._repo.refresh_instruments_cache()
+            except Exception as e:  # noqa: BLE001
+                logger.debug("instruments from quotes skipped: %s", e)
 
         # ---- 写 kline_daily (不复权原始价格, 只有 OHLCV) ----
         daily_df = self._build_daily(stock_records)
@@ -360,6 +349,38 @@ class QuoteService:
 
         # ---- 策略监控 + 告警评估 ----
         self._evaluate_monitors(daily_df, quote_extra)
+
+    @staticmethod
+    def _normalize_tickflow_quotes(resp) -> list[dict]:
+        records = []
+        for q in resp or []:
+            ext = q.get("ext") or {}
+            last_price = q.get("last_price")
+            prev_close = q.get("prev_close")
+            change_amount = ext.get("change_amount")
+            change_pct = ext.get("change_pct")
+            if change_amount is None and last_price is not None and prev_close is not None:
+                change_amount = float(last_price) - float(prev_close)
+            if change_pct is None and change_amount is not None and prev_close not in (None, 0):
+                change_pct = float(change_amount) / float(prev_close)
+            records.append({
+                "symbol": q.get("symbol"),
+                "name": q.get("name") or ext.get("name"),
+                "last_price": last_price,
+                "prev_close": prev_close,
+                "open": q.get("open"),
+                "high": q.get("high"),
+                "low": q.get("low"),
+                "volume": q.get("volume"),
+                "amount": q.get("amount"),
+                "change_pct": change_pct,
+                "change_amount": change_amount,
+                "amplitude": ext.get("amplitude"),
+                "turnover_rate": ext.get("turnover_rate"),
+                "timestamp": q.get("timestamp"),
+                "session": q.get("session"),
+            })
+        return records
 
     # ================================================================
     # 工具

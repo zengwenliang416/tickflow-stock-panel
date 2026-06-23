@@ -10,10 +10,11 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import polars as pl
 
+from app.config import settings
 from app.indicators.pipeline import filter_halt_days
 from app.tickflow.capabilities import Cap, CapabilitySet
 from app.tickflow.client import get_client
@@ -82,6 +83,17 @@ def sync_daily_batch(symbols: list[str],
     优先使用 start_time / end_time 区间 + count=10000,确保覆盖完整时间段。
     仅传 count 时按条数回溯。
     """
+    if settings.use_free_mode:
+        from app.services import free_market_data
+        df = free_market_data.fetch_daily_batch(
+            symbols,
+            count=count,
+            start_time=start_time,
+            end_time=end_time,
+            on_chunk_done=on_chunk_done,
+        )
+        return filter_halt_days(df) if not df.is_empty() else df
+
     tf = get_client()
     out: list[pl.DataFrame] = []
     interval = (60.0 / rpm) if rpm else 0
@@ -123,7 +135,19 @@ def sync_daily_batch(symbols: list[str],
             on_chunk_done(i + 1, len(chunks))
 
     if not out:
-        return pl.DataFrame()
+        try:
+            from app.services import free_market_data
+            df = free_market_data.fetch_daily_batch(
+                symbols,
+                count=count,
+                start_time=start_time,
+                end_time=end_time,
+                on_chunk_done=on_chunk_done,
+            )
+            return filter_halt_days(df) if not df.is_empty() else df
+        except Exception as e:  # noqa: BLE001
+            logger.warning("free daily fallback failed: %s", e)
+            return pl.DataFrame()
     return pl.concat(out, how="diagonal_relaxed")
 
 
@@ -180,40 +204,58 @@ def sync_daily_by_quotes(repo: KlineRepository) -> int:
     一个请求覆盖 ~5500 只股票,比 batch K-line 快几个数量级。
     返回写入的行数。
     """
-    from datetime import date as _date
+    today = date.today()
+    if settings.use_free_mode:
+        from app.services import free_market_data, instrument_sync
+        try:
+            records = free_market_data.fetch_realtime_stock_quotes()
+            if records:
+                instrument_sync.save_instruments_from_quotes(repo.store.data_dir, records)
+                repo.refresh_instruments_cache()
+            daily_df = free_market_data.records_to_daily(records)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("free quotes daily failed: %s", e)
+            return 0
+    else:
+        from app.tickflow.client import get_client
 
-    from app.tickflow.client import get_client
+        tf = get_client()
+        try:
+            resp = tf.quotes.get_by_universes(universes=["CN_Equity_A"])
+        except Exception as e:
+            logger.warning("get_by_universes failed, trying free quotes: %s", e)
+            from app.services import free_market_data
+            try:
+                records = free_market_data.fetch_realtime_stock_quotes()
+                daily_df = free_market_data.records_to_daily(records)
+            except Exception as fallback_e:  # noqa: BLE001
+                logger.warning("free quotes daily fallback failed: %s", fallback_e)
+                return 0
+        else:
+            if not resp:
+                logger.warning("get_by_universes returned empty")
+                return 0
 
-    tf = get_client()
-    try:
-        resp = tf.quotes.get_by_universes(universes=["CN_Equity_A"])
-    except Exception as e:
-        logger.warning("get_by_universes failed: %s", e)
+            records = []
+            for q in resp:
+                records.append({
+                    "symbol": q.get("symbol"),
+                    "open": q.get("open"),
+                    "high": q.get("high"),
+                    "low": q.get("low"),
+                    "close": q.get("last_price"),
+                    "volume": q.get("volume"),
+                    "amount": q.get("amount"),
+                })
+
+            df = pl.DataFrame(records)
+            if df.is_empty():
+                return 0
+
+            daily_df = df.with_columns(pl.lit(today).cast(pl.Date).alias("date"))
+
+    if daily_df.is_empty():
         return 0
-
-    if not resp:
-        logger.warning("get_by_universes returned empty")
-        return 0
-
-    records = []
-    for q in resp:
-        ext = q.get("ext") or {}
-        records.append({
-            "symbol": q.get("symbol"),
-            "open": q.get("open"),
-            "high": q.get("high"),
-            "low": q.get("low"),
-            "close": q.get("last_price"),
-            "volume": q.get("volume"),
-            "amount": q.get("amount"),
-        })
-
-    df = pl.DataFrame(records)
-    if df.is_empty():
-        return 0
-
-    today = _date.today()
-    daily_df = df.with_columns(pl.lit(today).cast(pl.Date).alias("date"))
 
     # 过滤停牌 (open/high 为 0; close 可能被填充为前收盘价, 不能用全零判断)
     daily_df = filter_halt_days(daily_df)

@@ -540,6 +540,11 @@ class KlineRepository:
             return pl.DataFrame()
         return self._instruments_cache
 
+    def refresh_instruments_cache(self) -> None:
+        """刷新 instruments 内存缓存。"""
+        self._instruments_cache = None
+        self._refresh_instruments()
+
     def get_index_instruments(self) -> pl.DataFrame:
         """返回缓存的指数 instruments DataFrame。如无缓存则懒加载。"""
         if self._index_instruments_cache is None:
