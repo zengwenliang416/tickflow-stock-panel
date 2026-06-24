@@ -10,6 +10,12 @@ services:
       - "127.0.0.1:${PORT:-3018}:3018"
     env_file:
       - .env
+    environment:
+      # Docker image places backend code at /app/app, so relative DATA_DIR from
+      # .env would otherwise resolve against / and write to ephemeral /data.
+      DATA_DIR: /app/data
+      STATIC_DIR: /app/static
+      TIERS_YAML: /app/tiers.yaml
     volumes:
       - ./data:/app/data
       - ./tiers.yaml:/app/tiers.yaml:ro
