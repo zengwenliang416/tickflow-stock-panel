@@ -112,6 +112,7 @@ def run_now(
     daily_dir_before_sync = repo.store.data_dir / "kline_daily"
     existing_daily_days = len(list(daily_dir_before_sync.glob("date=*"))) if daily_dir_before_sync.exists() else 0
     new_daily_days = 0
+    daily_overwritten_symbols: list[str] = []
 
     def _daily_chunk_progress(cur: int, tot: int) -> None:
         emit("sync_daily", 12 + int(33 * cur / tot),
@@ -124,6 +125,8 @@ def run_now(
             emit("sync_daily", 12, f"获取日K [{today} ~ {today}] {source_label}快照…")
             written_daily = kline_sync.sync_daily_by_quotes(repo, symbols=universe)
             new_daily_days = 1 if written_daily else 0
+            if written_daily:
+                daily_overwritten_symbols = list(universe)
             emit("sync_daily", 45, f"日K 完成,{written_daily} 只标的")
             logger.info("sync_daily: [%s ~ %s] %s quotes, %d symbols", today, today, source_label, written_daily)
         elif latest_daily and existing_daily_days >= 2:
@@ -256,6 +259,9 @@ def run_now(
     else:
         skipped.append("sync_adj")
         logger.info("sync_adj skipped: no ADJ_FACTOR capability")
+
+    if daily_overwritten_symbols:
+        affected_symbols = sorted(set(affected_symbols) | set(daily_overwritten_symbols))
 
     # Step 2: 计算 enriched
     #   判断策略:
