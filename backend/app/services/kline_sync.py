@@ -209,7 +209,7 @@ def sync_and_persist_daily_batch(
     return df.height
 
 
-def sync_daily_by_quotes(repo: KlineRepository) -> int:
+def sync_daily_by_quotes(repo: KlineRepository, symbols: list[str] | None = None) -> int:
     """用实时行情接口拉全市场当日数据,覆写 kline_daily 今天分区。
 
     一个请求覆盖 ~5500 只股票,比 batch K-line 快几个数量级。
@@ -219,8 +219,8 @@ def sync_daily_by_quotes(repo: KlineRepository) -> int:
     if settings.use_longbridge:
         from app.services import instrument_sync, longbridge_market_data
         try:
-            records = longbridge_market_data.fetch_realtime_stock_quotes()
-            if records:
+            records = longbridge_market_data.fetch_realtime_stock_quotes(symbols)
+            if records and not symbols:
                 instrument_sync.save_instruments_from_quotes(repo.store.data_dir, records)
                 repo.refresh_instruments_cache()
             daily_df = longbridge_market_data.records_to_daily(records)

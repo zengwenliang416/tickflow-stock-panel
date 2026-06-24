@@ -15,6 +15,7 @@ from longbridge.openapi import (
     AdjustType,
     Config,
     Language,
+    Market,
     OAuthBuilder,
     Period,
     QuoteContext,
@@ -30,6 +31,23 @@ CORE_INDEX_NAMES = {
     "HSI.HK": "恒生指数",
     "HSTECH.HK": "恒生科技",
 }
+
+CN_STOCK_PREFIXES = {
+    "SH": ("600", "601", "603", "605", "688", "689"),
+    "SZ": ("000", "001", "002", "003", "300", "301"),
+    "BJ": ("4", "8", "9"),
+}
+CN_NON_STOCK_NAME_KEYWORDS = (
+    "ETF",
+    "LOF",
+    "REIT",
+    "基金",
+    "债",
+    "转债",
+    "指数",
+    "货币",
+    "理财",
+)
 
 
 def _to_float(value: Any) -> float | None:
@@ -118,6 +136,60 @@ def _quote_rows(symbols: list[str]) -> list[dict]:
     for item in ctx.quote(symbols):
         out.append(_quote_row(item))
     return out
+
+
+def _security_name(item: Any) -> str:
+    return str(
+        getattr(item, "name_cn", None)
+        or getattr(item, "name_hk", None)
+        or getattr(item, "name_en", None)
+        or getattr(item, "symbol", "")
+    )
+
+
+def _is_cn_stock_security(item: Any) -> bool:
+    symbol = str(getattr(item, "symbol", "") or "")
+    code, _, market = symbol.partition(".")
+    prefixes = CN_STOCK_PREFIXES.get(market)
+    if not code or not prefixes or not code.startswith(prefixes):
+        return False
+
+    name = _security_name(item)
+    lowered = name.lower()
+    return not any(keyword.lower() in lowered for keyword in CN_NON_STOCK_NAME_KEYWORDS)
+
+
+@lru_cache(maxsize=1)
+def cn_stock_instruments() -> tuple[dict, ...]:
+    """Return A-share stock instruments from Longbridge CN security list."""
+    ctx = get_quote_context()
+    rows: list[dict] = []
+    for item in ctx.security_list(Market.CN):
+        if not _is_cn_stock_security(item):
+            continue
+        symbol = str(item.symbol)
+        code, _, market = symbol.partition(".")
+        rows.append({
+            "symbol": symbol,
+            "name": _security_name(item),
+            "code": code,
+            "exchange": market,
+            "region": "CN",
+            "type": "stock",
+            "asset_type": "stock",
+            "listing_date": None,
+            "total_shares": None,
+            "float_shares": None,
+            "tick_size": None,
+            "limit_up": None,
+            "limit_down": None,
+            "as_of": date.today(),
+        })
+    return tuple(sorted(rows, key=lambda row: row["symbol"]))
+
+
+def cn_stock_symbols() -> list[str]:
+    return [row["symbol"] for row in cn_stock_instruments()]
 
 
 @lru_cache(maxsize=1)
@@ -223,8 +295,18 @@ def records_to_instruments(records: list[dict], asset_type: str = "stock") -> pl
 
 
 def fetch_instruments() -> pl.DataFrame:
-    instruments = watchlist_instruments()
-    return records_to_instruments(instruments, asset_type="stock")
+    frames: list[pl.DataFrame] = []
+    cn_rows = list(cn_stock_instruments())
+    if cn_rows:
+        frames.append(pl.DataFrame(cn_rows))
+
+    watchlist_rows = list(watchlist_instruments())
+    if watchlist_rows:
+        frames.append(records_to_instruments(watchlist_rows, asset_type="stock"))
+
+    if not frames:
+        return pl.DataFrame()
+    return pl.concat(frames, how="diagonal_relaxed").unique(subset=["symbol"], keep="first").sort("symbol")
 
 
 def fetch_index_instruments() -> pl.DataFrame:

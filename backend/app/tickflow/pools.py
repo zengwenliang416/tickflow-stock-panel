@@ -88,6 +88,8 @@ def _fetch_pool(pool_id: PoolId) -> list[str]:
     if settings.use_longbridge:
         try:
             from app.services import longbridge_market_data
+            if pool_id == "CN_Equity_A":
+                return longbridge_market_data.cn_stock_symbols()
             if pool_id == "CN_Index":
                 return list(longbridge_market_data.CORE_INDEX_SYMBOLS)
             return longbridge_market_data.watchlist_symbols()

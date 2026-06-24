@@ -109,10 +109,54 @@ def run_now(
     latest_daily = repo.latest_daily_date()
     today = _date.today()
     today_exists = latest_daily and latest_daily >= today
+    daily_dir_before_sync = repo.store.data_dir / "kline_daily"
+    existing_daily_days = len(list(daily_dir_before_sync.glob("date=*"))) if daily_dir_before_sync.exists() else 0
     new_daily_days = 0
 
-    if settings.use_longbridge or settings.use_free_mode:
-        source_label = "Longbridge" if settings.use_longbridge else "免费行情"
+    def _daily_chunk_progress(cur: int, tot: int) -> None:
+        emit("sync_daily", 12 + int(33 * cur / tot),
+             f"日K 批次 {cur}/{tot}", stage_pct=int(100 * cur / tot), skip_log=True)
+
+    if settings.use_longbridge:
+        source_label = "Longbridge"
+        if today_exists and existing_daily_days >= 2:
+            # 已有历史窗口时,用实时快照覆写今天分区,保留昨日参考价用于涨跌停计算。
+            emit("sync_daily", 12, f"获取日K [{today} ~ {today}] {source_label}快照…")
+            written_daily = kline_sync.sync_daily_by_quotes(repo, symbols=universe)
+            new_daily_days = 1 if written_daily else 0
+            emit("sync_daily", 45, f"日K 完成,{written_daily} 只标的")
+            logger.info("sync_daily: [%s ~ %s] %s quotes, %d symbols", today, today, source_label, written_daily)
+        elif latest_daily and existing_daily_days >= 2:
+            # 有历史但今天没数据 → 用 Longbridge 日K接口补齐缺口。
+            start_date = latest_daily
+            emit("sync_daily", 12, f"获取日K [{start_date} ~ {today}] {source_label}历史…")
+            logger.info("sync_daily: [%s ~ %s] %s gap fill", start_date, today, source_label)
+            written_daily = kline_sync.sync_and_persist_daily_batch(
+                universe, repo, capset,
+                start_date=_dt.combine(start_date, _dt.min.time()),
+                end_date=_dt.combine(today, _dt.min.time()),
+                on_chunk_done=_daily_chunk_progress,
+            )
+            gap_days = (today - start_date).days
+            new_daily_days = gap_days
+            emit("sync_daily", 45, f"日K 完成,覆盖 {gap_days} 天")
+            logger.info("sync_daily: [%s ~ %s] done, %d rows", start_date, today, written_daily)
+        else:
+            # 首次需要历史窗口,否则单日快照无法计算涨跌停/连板。
+            start_date = today - _td(days=365)
+            emit("sync_daily", 12, f"获取日K [{start_date} ~ {today}] {source_label}历史…")
+            logger.info("sync_daily: [%s ~ %s] %s initial fetch", start_date, today, source_label)
+            written_daily = kline_sync.sync_and_persist_daily_batch(
+                universe, repo, capset,
+                start_date=_dt.combine(start_date, _dt.min.time()),
+                end_date=_dt.combine(today, _dt.min.time()),
+                on_chunk_done=_daily_chunk_progress,
+            )
+            new_daily_days = 365
+            emit("sync_daily", 45, "日K 完成")
+            logger.info("sync_daily: [%s ~ %s] done, %d rows", start_date, today, written_daily)
+    elif settings.use_free_mode:
+        source_label = "免费行情"
         emit("sync_daily", 12, f"获取日K [{today} ~ {today}] {source_label}快照…")
         written_daily = kline_sync.sync_daily_by_quotes(repo)
         new_daily_days = 1 if written_daily else 0
@@ -131,9 +175,6 @@ def run_now(
         emit("sync_daily", 12, f"获取日K [{start_date} ~ {today}]…")
         logger.info("sync_daily: [%s ~ %s] gap fill", start_date, today)
 
-        def _daily_chunk_progress(cur: int, tot: int) -> None:
-            emit("sync_daily", 12 + int(33 * cur / tot),
-                 f"日K 批次 {cur}/{tot}", stage_pct=int(100 * cur / tot), skip_log=True)
         written_daily = kline_sync.sync_and_persist_daily_batch(
             universe, repo, capset,
             start_date=_dt.combine(start_date, _dt.min.time()),
@@ -150,9 +191,6 @@ def run_now(
         emit("sync_daily", 12, f"获取日K [{start_date} ~ {today}]…")
         logger.info("sync_daily: [%s ~ %s] initial fetch", start_date, today)
 
-        def _daily_chunk_progress(cur: int, tot: int) -> None:
-            emit("sync_daily", 12 + int(33 * cur / tot),
-                 f"日K 批次 {cur}/{tot}", stage_pct=int(100 * cur / tot), skip_log=True)
         written_daily = kline_sync.sync_and_persist_daily_batch(
             universe, repo, capset,
             start_date=_dt.combine(start_date, _dt.min.time()),
