@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { refreshAlertToastConfig } from '@/components/AlertToast'
 import { SOUND_OPTIONS, previewSound } from '@/lib/notificationSound'
 
-export function SettingsSystemPanel() {
+export function SettingsSystemPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const qc = useQueryClient()
   const { data: prefs } = usePreferences()
   const [saving, setSaving] = useState(false)
@@ -59,10 +59,12 @@ export function SettingsSystemPanel() {
 
   return (
     <>
-      <PageHeader
-        title="系统设置"
-        subtitle="全局行为开关"
-      />
+      {!embedded && (
+        <PageHeader
+          title="系统设置"
+          subtitle="全局行为开关"
+        />
+      )}
 
       <section className="rounded-card border border-border bg-surface p-5">
         <div className="flex items-center gap-2 mb-4">
